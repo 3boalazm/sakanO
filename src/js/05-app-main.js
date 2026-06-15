@@ -172,6 +172,15 @@
       if(act==="budget"){ S.view="budget"; render(); return; }
       if(act==="shopping"){ S.view="shopping"; render(); return; }
       if(act==="settings"){ S.view="settings"; render(); return; }
+      if(act==="chat"){ S.view="chat"; render(); return; }
+      if(act==="sendMsg"){
+        const ta=document.getElementById("chatInput"); const t=(ta&&ta.value||"").trim();
+        if(!t) return;
+        if(ta){ ta.value=""; ta.style.height=""; }
+        try{ await api("POST","/messages",{ text:t }); _chatSig=""; await loadChat(); }
+        catch(e){ if(ta) ta.value=t; toast(errMsg(e)); }
+        return;
+      }
 
       // ---- tasks ----
       if(act==="addTask"){

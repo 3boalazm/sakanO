@@ -1,8 +1,11 @@
   // ---------- views ----------
   let _mtbPoll = null;   // متابعتنا: مؤقّت التحديث الحيّ (polling)
+  let _chatPoll = null;  // شاتنا: مؤقّت التحديث الحيّ (polling)
+  let _chatSig  = "";    // توقيع آخر رسائل لمنع إعادة رسم بلا داعٍ
   let _mtbSig  = "";     // توقيع آخر بيانات لمنع إعادة الرسم بلا داعٍ
   function render(){
     if(_mtbPoll){ clearInterval(_mtbPoll); _mtbPoll=null; }   // أي تنقّل يوقف الـ polling
+    if(_chatPoll){ clearInterval(_chatPoll); _chatPoll=null; }
     renderBar();
     document.body.classList.toggle("pre-auth", !S.token || S.view==="pinlock");
     if(S.view==="pinlock") return renderPinLock();
@@ -13,6 +16,7 @@
     if(S.view==="discussions") return renderDiscussionsAll();
     if(S.view==="decisionlog") return renderDecisionLog();
     if(S.view==="connect") return renderConnect();
+    if(S.view==="chat") return renderChat();
     if(S.view==="charter") return renderCharter();
     if(S.view==="tasks") return renderTasks();
     if(S.view==="budget") return renderBudget();
@@ -199,6 +203,55 @@
     _mtbSig = "";
     loadMutabaana();
     _mtbPoll = setInterval(()=>{ if(S.view!=="mutabaana"){ clearInterval(_mtbPoll); _mtbPoll=null; return; } loadMutabaana(); }, 15000);
+  }
+
+  // ---------- شاتنا: محادثة خاصة ١:١ بين الطرفين (server-mediated + polling) ----------
+  async function loadChat(){
+    let msgs;
+    try{ msgs = await api("GET","/messages"); }
+    catch(e){ const b=document.getElementById("chatScroll"); if(b) b.innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`; return; }
+    const sig = msgs.map(m=>m.id).join(",");
+    const box = document.getElementById("chatScroll");
+    if(sig===_chatSig && box && box.dataset.ready) return;
+    const atBottom = box ? (box.scrollHeight - box.scrollTop - box.clientHeight < 80) : true;
+    _chatSig = sig;
+    renderChatMsgs(msgs, atBottom);
+  }
+  function renderChatMsgs(msgs, stick){
+    const box = document.getElementById("chatScroll"); if(!box) return;
+    if(!msgs.length){ box.innerHTML = `<div class="empty">لسه مفيش رسايل — ابدأ إنت 🌿</div>`; box.dataset.ready="1"; return; }
+    const meBg = "linear-gradient(135deg,var(--brand-mid,#1a5d47),var(--brand-deep,#0e3b2e))";
+    box.innerHTML = msgs.map(m=>{
+      const mine = !!m.mine;
+      const d = new Date(m.createdAt||0);
+      const hh = isNaN(d.getTime())?"":d.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});
+      const bub = mine
+        ? `background:${meBg};color:#fff;margin-inline-start:auto;border-end-end-radius:5px`
+        : `background:var(--card-2,#f1ede1);color:var(--ink);margin-inline-end:auto;border-end-start-radius:5px`;
+      return `<div style="display:flex;margin:6px 0">
+        <div style="max-width:80%;padding:9px 13px;border-radius:16px;${bub};box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,.08))">
+          <div style="white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.55">${esc(m.text)}</div>
+          <div style="font-size:10.5px;opacity:.6;text-align:left;margin-top:3px">${hh}</div>
+        </div></div>`;
+    }).join("");
+    box.dataset.ready="1";
+    if(stick) box.scrollTop = box.scrollHeight;
+  }
+  function renderChat(){
+    S.view="chat"; S.resourceId=null;
+    el.innerHTML = pageTitle("شاتنا","مساحة خاصة بينك وبين شريكك — بتتحدّث تلقائيًا كل شوية 🌿")
+      + `<div class="card" style="padding:10px">
+          <div id="chatScroll" style="height:min(58vh,460px);overflow-y:auto;padding:4px 6px"><div class="empty">…تحميل</div></div>
+          <div style="display:flex;gap:8px;margin-top:8px;align-items:flex-end">
+            <textarea id="chatInput" placeholder="اكتب رسالة…" rows="1" style="flex:1;resize:none;min-height:44px;max-height:130px"></textarea>
+            <button class="btn accent" data-act="sendMsg" style="flex:none">إرسال</button>
+          </div>
+        </div>`;
+    _chatSig = "";
+    const ta = document.getElementById("chatInput");
+    if(ta) ta.addEventListener("keydown",(e)=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); go("sendMsg", ta); } });
+    loadChat();
+    _chatPoll = setInterval(()=>{ if(S.view!=="chat"){ clearInterval(_chatPoll); _chatPoll=null; return; } loadChat(); }, 4000);
   }
 
   // ========== PIN Lock ==========
@@ -1070,6 +1123,10 @@
             <div class="actions" style="justify-content:space-between"><span class="pill ${c.mine?'':'warn'}">${c.mine?'رسالتك':'رسالة شريكك'}</span>${c.openDate?`<span class="pill">📅 ${esc(c.openDate)}</span>`:""}</div>
             <p style="margin:8px 0 0">${c.sealed?'<span class="muted">🔒 مختومة حتى تاريخها.</span>':esc(c.content)}</p></div>`).join("") : ""}</div>
 
+        <div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:160px"><div class="eyebrow">شاتنا 💌</div>
+            <p class="muted" style="margin:2px 0 0;font-size:13px">مساحة دردشة خاصة بينك وبين شريكك.</p></div>
+          <button class="btn accent" data-act="chat" style="flex:none">افتح الشات</button></div>
         <div class="card"><div class="eyebrow">صندوق التفاهم</div>
           <p class="muted" style="margin-top:-6px;font-size:13px">اطرح موضوعًا يصعب قوله — بهدوء، وبصيغة المشاعر والاحتياج.</p>
           <div class="row"><label>الموضوع</label><input id="safeTopic" type="text" placeholder="حاجة نفسي نتكلم فيها…"></div>

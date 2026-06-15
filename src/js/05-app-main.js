@@ -39,6 +39,8 @@
       if(act==="library"){ S.view="library"; S.tab="summary"; render(); return; }
 
       if(act==="setProg"){ await api("PUT","/resources/"+S.resourceId+"/progress",{ status:node.dataset.val }); renderResource(); return; }
+      if(act==="savePos"){ const v=(document.getElementById("posInput")||{}).value||""; await api("PUT","/resources/"+S.resourceId+"/position",{ position:v }); toast("اتسجّلت نقطة التوقّف ⏱"); renderResource(); return; }
+      if(act==="clearPos"){ await api("PUT","/resources/"+S.resourceId+"/position",{ position:"" }); toast("اتمسحت نقطة التوقّف"); renderResource(); return; }
       if(act==="mutabaana"){ S.view="mutabaana"; render(); return; }
       if(act==="setProgId"){ await api("PUT","/resources/"+node.dataset.res+"/progress",{ status:node.dataset.val }); _mtbSig=""; loadMutabaana(); return; }
       if(act==="mtbFilter"){ S.mtbFilter=node.dataset.f; renderMutabaanaBody(_mtbItems); return; }

@@ -1,0 +1,33 @@
+/* ===== الهامبرجر + الدرّ هو المنيو ===== */
+  .hamburger{display:flex; align-items:center; justify-content:center; flex:none; background:var(--primary-soft); border:none; color:var(--ink); font-size:22px; cursor:pointer; width:42px; height:42px; border-radius:12px; line-height:1}
+  .hamburger:hover{filter:brightness(.96)}
+  .bar-actions{display:none}
+  /* ===== الديسكتوب: كويك أكسيس + ثيم ===== */
+  @media(min-width:769px){
+    .bar-actions{display:flex; gap:6px; align-items:center}
+    .drawer{width:360px} .dw-link{font-size:17px; padding:14px 16px}
+  }
+  .qa{display:flex; gap:2px; align-items:center}
+  .qa-link{background:transparent; border:none; color:var(--ink); font-family:inherit; font-size:14px; font-weight:700; padding:8px 11px; border-radius:10px; cursor:pointer; white-space:nowrap}
+  .qa-link:hover{background:var(--primary-soft)}
+  .qa-link.on{background:var(--primary-soft); color:var(--primary-ink)}
+  .qa-theme{display:inline-flex; gap:3px; margin-inline-start:6px; padding-inline-start:8px; border-inline-start:1px solid var(--line)}
+  .qa-theme button{background:transparent; border:none; color:var(--ink); font-size:15px; width:34px; height:32px; border-radius:8px; cursor:pointer}
+  .qa-theme button:hover{background:var(--primary-soft)}
+  .qa-theme button.on{background:var(--primary-soft)}
+  /* ===== محوّل البلاي ليست + رؤوس الكاتيجوريز ===== */
+  .pl-seg{display:flex; gap:8px; margin:16px 0 6px}
+  .pl-seg button{flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 10px; border-radius:14px; border:1.5px solid var(--line); background:var(--surface); color:var(--ink); font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; transition:all .2s; white-space:nowrap}
+  .pl-seg button:hover{border-color:var(--brand-gold)}
+  .pl-seg button.on{background:linear-gradient(135deg,var(--brand-mid),var(--brand-deep)); color:#fff; border-color:transparent; box-shadow:0 6px 18px -8px rgba(14,59,46,.5)}
+  .pl-seg .pl-ic{font-size:14px; color:#e23} .pl-seg .pl-ic.tg{color:#2a7ab0} .pl-seg button.on .pl-ic{color:#fff}
+  .pl-seg .pl-n{background:rgba(0,0,0,.12); border-radius:99px; padding:1px 9px; font-size:13px} .pl-seg button.on .pl-n{background:rgba(255,255,255,.2)}
+  .cat-h{display:flex; align-items:center; gap:12px; margin:26px 0 12px; padding-bottom:10px; border-bottom:2px solid var(--line)}
+  .cat-ic{font-size:22px; width:46px; height:46px; flex:none; display:flex; align-items:center; justify-content:center; background:var(--gold-pale,#fdf5e0); border:1px solid var(--brand-gold); border-radius:13px}
+  .cat-t{font-size:17px; font-weight:800; color:var(--ink)}
+  .cat-s{font-size:12.5px; color:var(--muted); margin-top:2px}
+  .hintbox{background:var(--gold-pale,#fdf5e0); border:1px solid var(--line); border-radius:12px; padding:8px 14px; margin:10px 0 6px}
+  .hintbox summary{cursor:pointer; font-weight:700; color:var(--primary-ink); font-size:13.5px; padding:4px 0; list-style:none}
+  .hintbox summary::-webkit-details-marker{display:none}
+  [data-theme="dark"] .hintbox,[data-theme="oled"] .hintbox{background:rgba(201,161,74,.08)}
+  

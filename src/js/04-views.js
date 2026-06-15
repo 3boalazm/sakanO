@@ -2,7 +2,10 @@
   let _mtbPoll = null;   // متابعتنا: مؤقّت التحديث الحيّ (polling)
   let _chatPoll = null;  // شاتنا: مؤقّت التحديث الحيّ (polling)
   let _chatSig  = "";    // توقيع آخر رسائل لمنع إعادة رسم بلا داعٍ
+  let _chatMsgs = [];    // آخر رسائل محمّلة (لقائمة الإجراءات/الرد)
+  let _chatPartnerRead = 0; // آخر وقت قرأ فيه الشريك (لعلامات ✓✓)
   let _mtbSig  = "";     // توقيع آخر بيانات لمنع إعادة الرسم بلا داعٍ
+  let _mtbItems = [];    // آخر مواد محمّلة (للفلترة بدون إعادة جلب)
   function render(){
     if(_mtbPoll){ clearInterval(_mtbPoll); _mtbPoll=null; }   // أي تنقّل يوقف الـ polling
     if(_chatPoll){ clearInterval(_chatPoll); _chatPoll=null; }
@@ -17,6 +20,7 @@
     if(S.view==="decisionlog") return renderDecisionLog();
     if(S.view==="connect") return renderConnect();
     if(S.view==="chat") return renderChat();
+    if(S.view==="search") return renderSearch();
     if(S.view==="charter") return renderCharter();
     if(S.view==="tasks") return renderTasks();
     if(S.view==="budget") return renderBudget();
@@ -136,6 +140,7 @@
     const body = document.getElementById("mtbBody");
     if(sig===_mtbSig && body && body.dataset.ready) return;
     _mtbSig = sig;
+    _mtbItems = items;
     renderMutabaanaBody(items);
   }
   function renderMutabaanaBody(items){
@@ -150,9 +155,15 @@
       <div><div class="display" style="font-size:26px;margin:0">${mineDone}</div><div class="muted" style="font-size:12px">أنا</div></div>
       <div><div class="display" style="font-size:26px;margin:0">${partnerDone}</div><div class="muted" style="font-size:12px">شريكي</div></div>
     </div>`;
+    // فلتر حسب الطرف والحالة
+    const F = S.mtbFilter || "all";
+    const chip = (val,lbl)=>{ const a=F===val; return `<button data-act="mtbFilter" data-f="${val}" style="width:auto;padding:6px 13px;border-radius:99px;border:1px solid ${a?'transparent':'var(--line)'};background:${a?'linear-gradient(135deg,var(--brand-mid,#1a5d47),var(--brand-deep,#0e3b2e))':'var(--surface)'};color:${a?'#fff':'var(--ink)'};font:inherit;font-size:12.5px;font-weight:700;cursor:pointer">${lbl}</button>`; };
+    html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:14px 2px 2px">${chip("all","الكل")}${chip("mine_ip","أنا: بتابع")}${chip("mine_done","أنا: خلّصت")}${chip("partner_ip","شريكي: بيتابع")}${chip("partner_done","شريكي: خلّص")}</div>`;
+    const matchF = (r)=>{ const p=r.prog||{mine:"not_started",partner:"not_started"}; switch(F){ case "mine_ip":return p.mine==="in_progress"; case "mine_done":return p.mine==="completed"; case "partner_ip":return p.partner==="in_progress"; case "partner_done":return p.partner==="completed"; default:return true; } };
+    const shown = items.filter(matchF);
     // مجمّعة على المراحل الست؛ بلا مرحلة → "أخرى"
-    const groups = STAGES.map(s=>({ n:s.n, title:s.title, theme:s.theme, items: items.filter(r=> Number(r.stage)===s.n) }));
-    const noStage = items.filter(r=> r.stage==null || Number.isNaN(Number(r.stage)));
+    const groups = STAGES.map(s=>({ n:s.n, title:s.title, theme:s.theme, items: shown.filter(r=> Number(r.stage)===s.n) }));
+    const noStage = shown.filter(r=> r.stage==null || Number.isNaN(Number(r.stage)));
     if(noStage.length) groups.push({ n:-1, title:"أخرى", theme:"مواد مضافة يدويًا بلا مرحلة.", items:noStage });
     let any=false;
     const barTrack = "flex:1;height:8px;border-radius:99px;background:var(--line);overflow:hidden";
@@ -192,7 +203,7 @@
         </div>`;
       }
     }
-    if(!any) html += `<div class="empty">لسه مفيش مواد. استورد المنهج من «قوائمنا» الأول 🌿</div>`;
+    if(!any) html += `<div class="empty">${F==="all"?"لسه مفيش مواد. استورد المنهج من «قوائمنا» الأول 🌿":"مفيش مواد في الفلتر ده."}</div>`;
     body.innerHTML = html;
     body.dataset.ready = "1";
   }
@@ -205,53 +216,106 @@
     _mtbPoll = setInterval(()=>{ if(S.view!=="mutabaana"){ clearInterval(_mtbPoll); _mtbPoll=null; return; } loadMutabaana(); }, 15000);
   }
 
-  // ---------- شاتنا: محادثة خاصة ١:١ بين الطرفين (server-mediated + polling) ----------
+  // ---------- شاتنا: محادثة خاصة ١:١ زيّ تيليجرام (server-mediated + polling) ----------
   async function loadChat(){
-    let msgs;
-    try{ msgs = await api("GET","/messages"); }
+    let res;
+    try{ res = await api("GET","/messages"); }
     catch(e){ const b=document.getElementById("chatScroll"); if(b) b.innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`; return; }
-    const sig = msgs.map(m=>m.id).join(",");
+    const msgs = (res&&res.items)||[]; const partnerRead=(res&&res.partnerRead)||0;
+    _chatPartnerRead = partnerRead;
+    const sig = msgs.map(m=>`${m.id}:${m.edited?1:0}:${m.deleted?1:0}`).join(",")+"|"+partnerRead;
     const box = document.getElementById("chatScroll");
-    if(sig===_chatSig && box && box.dataset.ready) return;
-    const atBottom = box ? (box.scrollHeight - box.scrollTop - box.clientHeight < 80) : true;
-    _chatSig = sig;
-    renderChatMsgs(msgs, atBottom);
+    if(!(sig===_chatSig && box && box.dataset.ready)){
+      const atBottom = box ? (box.scrollHeight - box.scrollTop - box.clientHeight < 90) : true;
+      _chatSig = sig;
+      renderChatMsgs(msgs, partnerRead, atBottom);
+    }
+    api("POST","/messages/read",{}).catch(()=>{});   // علّم إني قريت (يظهر ✓✓ عند الشريك)
   }
-  function renderChatMsgs(msgs, stick){
+  function renderChatMsgs(msgs, partnerRead, stick){
     const box = document.getElementById("chatScroll"); if(!box) return;
+    _chatMsgs = msgs;
     if(!msgs.length){ box.innerHTML = `<div class="empty">لسه مفيش رسايل — ابدأ إنت 🌿</div>`; box.dataset.ready="1"; return; }
     const meBg = "linear-gradient(135deg,var(--brand-mid,#1a5d47),var(--brand-deep,#0e3b2e))";
-    box.innerHTML = msgs.map(m=>{
+    const dayLabel = (ts)=>{ const d=new Date(ts); const t=new Date(); t.setHours(0,0,0,0); const y=new Date(t); y.setDate(y.getDate()-1); if(d>=t) return "اليوم"; if(d>=y) return "أمس"; return d.toLocaleDateString("ar-EG",{day:"numeric",month:"long"}); };
+    let html=""; let lastDay=null;
+    for(const m of msgs){
+      const day = dayLabel(m.createdAt);
+      if(day!==lastDay){ html += `<div style="text-align:center;margin:12px 0 6px"><span style="background:var(--card-2,#eee);color:var(--muted);font-size:11.5px;padding:3px 12px;border-radius:99px">${day}</span></div>`; lastDay=day; }
       const mine = !!m.mine;
-      const d = new Date(m.createdAt||0);
-      const hh = isNaN(d.getTime())?"":d.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});
-      const bub = mine
-        ? `background:${meBg};color:#fff;margin-inline-start:auto;border-end-end-radius:5px`
-        : `background:var(--card-2,#f1ede1);color:var(--ink);margin-inline-end:auto;border-end-start-radius:5px`;
-      return `<div style="display:flex;margin:6px 0">
-        <div style="max-width:80%;padding:9px 13px;border-radius:16px;${bub};box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,.08))">
-          <div style="white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.55">${esc(m.text)}</div>
-          <div style="font-size:10.5px;opacity:.6;text-align:left;margin-top:3px">${hh}</div>
+      const hh = new Date(m.createdAt).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});
+      const ticks = (mine && !m.deleted) ? (m.createdAt<=partnerRead ? "✓✓" : "✓") : "";
+      const bub = mine ? `background:${meBg};color:#fff;margin-inline-start:auto;border-end-end-radius:5px` : `background:var(--card-2,#f1ede1);color:var(--ink);margin-inline-end:auto;border-end-start-radius:5px`;
+      const reply = m.replyText ? `<div style="border-inline-start:3px solid ${mine?'rgba(255,255,255,.6)':'var(--brand-gold,#c9a14a)'};padding-inline-start:7px;margin-bottom:4px;font-size:12.5px;opacity:.85;white-space:pre-wrap;word-break:break-word">${esc(m.replyText)}</div>` : "";
+      const body = m.deleted ? `<i style="opacity:.7">🚫 رسالة محذوفة</i>` : esc(m.text);
+      html += `<div style="display:flex;margin:4px 0">
+        <div data-act="chatMenu" data-id="${esc(m.id)}" style="cursor:pointer;max-width:80%;padding:8px 12px;border-radius:16px;${bub};box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,.08))">
+          ${reply}
+          <div style="white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.55">${body}</div>
+          <div style="font-size:10.5px;opacity:.65;text-align:left;margin-top:3px">${(m.edited&&!m.deleted)?"عُدّلت · ":""}${hh}${ticks?(" "+ticks):""}</div>
         </div></div>`;
-    }).join("");
-    box.dataset.ready="1";
+      if(S.chatMenu===m.id && !m.deleted){
+        const btn=(a,lbl)=>`<button class="btn soft sm" data-act="${a}" data-id="${esc(m.id)}" style="width:auto;padding:0 10px">${lbl}</button>`;
+        html += `<div style="display:flex;gap:6px;flex-wrap:wrap;${mine?'justify-content:flex-start':'justify-content:flex-end'};margin:-1px 0 7px">${btn("chatReply","↩️ رد")}${btn("chatCopy","📋 نسخ")}${mine?btn("chatEditStart","✏️ تعديل"):""}${mine?btn("chatDelete","🗑️ حذف"):""}</div>`;
+      }
+    }
+    box.innerHTML = html; box.dataset.ready="1";
     if(stick) box.scrollTop = box.scrollHeight;
   }
+  function renderComposer(){
+    const c = document.getElementById("chatComposer"); if(!c) return;
+    let banner="";
+    if(S.chatEdit){ banner = `<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);padding:4px 6px;border-inline-start:3px solid var(--brand-gold,#c9a14a);margin-bottom:6px">✏️ تعديل رسالة<span class="spacer" style="flex:1"></span><button class="linkbtn" data-act="chatCancelCompose">إلغاء</button></div>`; }
+    else if(S.chatReply){ banner = `<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);padding:4px 6px;border-inline-start:3px solid var(--brand-gold,#c9a14a);margin-bottom:6px">↩️ ردًا على: <span style="opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%">${esc((S.chatReply.text||"").slice(0,60))}</span><span class="spacer" style="flex:1"></span><button class="linkbtn" data-act="chatCancelCompose">إلغاء</button></div>`; }
+    c.innerHTML = banner + `<div style="display:flex;gap:8px;align-items:flex-end">
+        <textarea id="chatInput" placeholder="اكتب رسالة…" rows="1" style="flex:1;resize:none;min-height:44px;max-height:130px"></textarea>
+        <button class="btn accent" data-act="sendMsg" style="flex:none">${S.chatEdit?"حفظ":"إرسال"}</button></div>`;
+    const ta = document.getElementById("chatInput");
+    if(ta){
+      if(S.chatEdit){ const m=_chatMsgs.find(x=>x.id===S.chatEdit); if(m) ta.value=m.text; }
+      ta.addEventListener("keydown",(e)=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); go("sendMsg", ta); } });
+      ta.focus();
+    }
+  }
   function renderChat(){
-    S.view="chat"; S.resourceId=null;
-    el.innerHTML = pageTitle("شاتنا","مساحة خاصة بينك وبين شريكك — بتتحدّث تلقائيًا كل شوية 🌿")
+    S.view="chat"; S.resourceId=null; S.chatReply=null; S.chatEdit=null; S.chatMenu=null;
+    el.innerHTML = pageTitle("شاتنا","مساحة خاصة بينك وبين شريكك — زيّ الشات العادي، بتتحدّث تلقائيًا 🌿")
       + `<div class="card" style="padding:10px">
           <div id="chatScroll" style="height:min(58vh,460px);overflow-y:auto;padding:4px 6px"><div class="empty">…تحميل</div></div>
-          <div style="display:flex;gap:8px;margin-top:8px;align-items:flex-end">
-            <textarea id="chatInput" placeholder="اكتب رسالة…" rows="1" style="flex:1;resize:none;min-height:44px;max-height:130px"></textarea>
-            <button class="btn accent" data-act="sendMsg" style="flex:none">إرسال</button>
-          </div>
+          <div id="chatComposer" style="margin-top:8px"></div>
         </div>`;
     _chatSig = "";
-    const ta = document.getElementById("chatInput");
-    if(ta) ta.addEventListener("keydown",(e)=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); go("sendMsg", ta); } });
+    renderComposer();
     loadChat();
     _chatPoll = setInterval(()=>{ if(S.view!=="chat"){ clearInterval(_chatPoll); _chatPoll=null; return; } loadChat(); }, 4000);
+  }
+
+  // ---------- بحث شامل في كل حاجة ----------
+  async function renderSearch(){
+    S.view="search"; S.resourceId=null;
+    el.innerHTML = pageTitle("بحث","دوّر في كل حاجة في سكن — موارد، أسئلة نقاش، قرارات، ومهام.")
+      + `<div class="card"><div class="row"><input id="gSearch" type="search" placeholder="اكتب اللي بتدوّر عليه…" value="${esc(S.searchQ||"")}"></div></div>`
+      + `<div id="gResults"><div class="empty">اكتب كلمة للبحث.</div></div>`;
+    let data;
+    try{ const [items,questions,decisions,tasks] = await Promise.all([api("GET","/resources"),api("GET","/questions").catch(()=>[]),api("GET","/decisions").catch(()=>[]),api("GET","/tasks").catch(()=>[])]); data={items,questions,decisions,tasks}; }
+    catch(e){ const b=document.getElementById("gResults"); if(b) b.innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`; return; }
+    const run = (q)=>{
+      q=(q||"").trim().toLowerCase(); const box=document.getElementById("gResults"); if(!box) return;
+      if(!q){ box.innerHTML=`<div class="empty">اكتب كلمة للبحث.</div>`; return; }
+      const hit=s=>String(s||"").toLowerCase().includes(q);
+      const ri=data.items.filter(r=>hit(r.title)||hit(r.speaker)||hit(r.link));
+      const qi=data.questions.filter(x=>hit(x.text));
+      const di=data.decisions.filter(x=>hit(x.title)||hit(x.context)||hit(x.summary));
+      const ti=data.tasks.filter(x=>hit(x.title));
+      let html="";
+      if(ri.length) html+=`<div class="eyebrow" style="margin-top:14px">موارد (${ri.length})</div>`+ri.map(r=>`<div class="card res" data-open="${esc(r.id)}"><div style="flex:1;min-width:0">${ytMark(r)}${esc(r.title)}${r.speaker?` <span class="muted">· ${esc(r.speaker)}</span>`:""}</div>${dualProg(r.prog)}</div>`).join("");
+      if(qi.length) html+=`<div class="eyebrow" style="margin-top:16px">أسئلة نقاش (${qi.length})</div>`+qi.map(x=>`<div class="card res" data-openq="${esc(x.resourceId)}"><div style="flex:1;min-width:0">💬 ${esc(x.text)}</div></div>`).join("");
+      if(di.length) html+=`<div class="eyebrow" style="margin-top:16px">قرارات (${di.length})</div>`+di.map(x=>`<div class="card res" data-act="decisionlog"><div style="flex:1;min-width:0">✅ ${esc(x.title||x.context||"قرار")}</div></div>`).join("");
+      if(ti.length) html+=`<div class="eyebrow" style="margin-top:16px">مهام (${ti.length})</div>`+ti.map(x=>`<div class="card res" data-act="tasks"><div style="flex:1;min-width:0">🗒️ ${esc(x.title)}</div></div>`).join("");
+      box.innerHTML = html || `<div class="empty" style="margin-top:12px">مفيش نتائج لـ «${esc(q)}».</div>`;
+    };
+    const gi=document.getElementById("gSearch");
+    if(gi){ gi.addEventListener("input",()=>run(gi.value)); if(S.searchQ) run(S.searchQ); gi.focus(); }
   }
 
   // ========== PIN Lock ==========
@@ -495,11 +559,10 @@
           <div style="display:flex;gap:6px;flex:none;align-items:center">${dualProg(r.prog)}</div></div>
         <div class="actions" style="margin:-6px 0 16px"><span class="spacer"></span><button class="linkbtn" data-act="clearFocus">إزالة التركيز</button></div>`;
       }
-      const bothDone = r => r.prog && r.prog.mine==='completed' && r.prog.partner==='completed';
-      const open = items.filter(r=> !bothDone(r));
+      const open = items.filter(r=> r.prog && r.prog.mine==='in_progress');
       const box = document.getElementById("loops");
-      if(!open.length){ box.innerHTML = `<div class="empty">مفيش حلقات مفتوحة 🌿 خلّصنا كل المواد المضافة. نقدر نضيف مورد جديد من المكتبة.</div>`; return; }
-      box.innerHTML = `<div class="eyebrow" style="margin-bottom:10px">حلقات مفتوحة</div>` + open.slice(0,8).map(r=>`
+      if(!open.length){ box.innerHTML = `<div class="empty">مفيش حلقات إنت متابعها دلوقتي 🌿 ابدأ مادة من «متابعتنا» أو المكتبة وهتظهر هنا.</div>`; return; }
+      box.innerHTML = `<div class="eyebrow" style="margin-bottom:10px">حلقات مفتوحة — اللي إنت متابعها</div>` + open.slice(0,20).map(r=>`
         <div class="card res" data-open="${esc(r.id)}">
           <div style="display:flex;gap:14px;align-items:center;flex:1;min-width:0">
             ${ r.thumbnail ? `<img src="${esc(r.thumbnail)}" alt="" loading="lazy" style="width:104px;height:62px;object-fit:cover;border-radius:10px;flex:none">` : "" }
@@ -935,27 +998,31 @@
       return;
     }
 
-    // ── Icon & label per event type ──
+    // ── Icon & label per action (method + path) ──
     function evIcon(e){
-      if(e.entity==="resource"){
-        if(e.type==="created")          return {ico:"📚",txt:"أضفت موردًا جديدًا"+(e.title?` · ${e.title}`:"")};
-        if(e.type==="progress"||e.type==="transition"){
-          if(e.to==="completed")        return {ico:"✅",txt:"أنهيت مادة"+(e.title?` · ${e.title}`:"")};
-          if(e.to==="in_progress")      return {ico:"▶️",txt:"بدأت مادة"+(e.title?` · ${e.title}`:"")};
-        }
-        if(e.type==="summary_generated") return {ico:"🤖",txt:"ولّدت ملخصًا"+(e.title?` · ${e.title}`:"")};
-      }
-      if(e.entity==="question"){
-        if(e.type==="created")          return {ico:"💬",txt:"أضفت سؤالًا للنقاش"+(e.title?` من · ${e.title}`:"")};
-        if(e.type==="response_submitted") return {ico:"✍️",txt:"أجبت على سؤال"+(e.title?` في · ${e.title}`:"")};
-        if(e.type==="transition" && e.to==="revealed") return {ico:"👀",txt:"كشفت الإجابات"+(e.title?` · ${e.title}`:"")};
-      }
-      if(e.entity==="decision"){
-        if(e.type==="created")          return {ico:"⚡",txt:"سجّلت قرارًا"+(e.title?` من · ${e.title}`:"")};
-        if(e.type==="confirmation")     return {ico:"🤝",txt:"أكّدت قرارًا"};
-      }
-      if(e.entity==="task" && e.type==="created") return {ico:"🗒️",txt:"أضفت مهمة"};
-      return {ico:"🔔",txt:`نشاط`};
+      const p = e.path || []; const t = e.title ? ` · ${e.title}` : "";
+      const k = (p[0]||"") + (p[2] ? "/"+p[2] : "");
+      const MAP = {
+        "resources":{ico:"📚",txt:"أضفت موردًا"+t}, "resources/full":{ico:"📚",txt:"أضفت موردًا"+t},
+        "resources/progress":{ico:"▶️",txt:"حدّثت تقدّمك في مادة"+t}, "resources/priority":{ico:"⭐",txt:"غيّرت أولوية مادة"+t},
+        "resources/category":{ico:"🏷️",txt:"غيّرت تصنيف مادة"+t}, "resources/notes":{ico:"📝",txt:"حفظت ملاحظة"+t},
+        "resources/summary":{ico:"🤖",txt:"ولّدت ملخصًا"+t}, "resources/questions":{ico:"💬",txt:"أضفت أسئلة نقاش"+t},
+        "questions/responses":{ico:"✍️",txt:"أجبت على سؤال"}, "questions/reveal":{ico:"👀",txt:"كشفت إجابات سؤال"}, "questions/force-reveal":{ico:"👀",txt:"كشفت إجابات سؤال"},
+        "decisions":{ico:"⚡",txt:"سجّلت قرارًا"}, "decisions/confirm":{ico:"🤝",txt:"أكّدت قرارًا"}, "decisions/reviewed":{ico:"🔁",txt:"راجعت قرارًا"},
+        "tasks":{ico:"🗒️",txt:"أضفت مهمة"}, "tasks/toggle":{ico:"✔️",txt:"بدّلت حالة مهمة"}, "tasks/delete":{ico:"🗑️",txt:"حذفت مهمة"},
+        "budget":{ico:"💰",txt:"أضفت بند ميزانية"}, "budget/pay":{ico:"💵",txt:"سجّلت دفعة"}, "budget/delete":{ico:"🗑️",txt:"حذفت بند ميزانية"},
+        "shopping":{ico:"🛒",txt:"أضفت للمشتريات"}, "shopping/toggle":{ico:"✔️",txt:"بدّلت صنف مشتريات"}, "shopping/delete":{ico:"🗑️",txt:"حذفت صنف مشتريات"},
+        "messages":{ico:"💌",txt:"بعت رسالة في الشات"}, "messages/edit":{ico:"✏️",txt:"عدّلت رسالة"}, "messages/delete":{ico:"🗑️",txt:"حذفت رسالة"},
+        "wishes":{ico:"🌠",txt:"أضفت أمنية"}, "wishes/toggle":{ico:"✔️",txt:"حدّثت أمنية"}, "wishes/delete":{ico:"🗑️",txt:"حذفت أمنية"},
+        "gratitude":{ico:"🤲",txt:"أضفت امتنانًا"}, "gratitude/delete":{ico:"🗑️",txt:"حذفت امتنانًا"},
+        "capsules":{ico:"📨",txt:"ختمت رسالة مؤجّلة"}, "mood":{ico:"🌤️",txt:"حدّثت مزاجك"},
+        "safespace":{ico:"🕊️",txt:"أضفت لصندوق التفاهم"}, "safespace/addressed":{ico:"✅",txt:"اتكلمتوا في موضوع"},
+        "keys":{ico:"🗝️",txt:"أضفت مفتاحًا"}, "keys/delete":{ico:"🗑️",txt:"حذفت مفتاحًا"},
+        "charter":{ico:"📜",txt:"أضفت لميثاقكم"}, "charter/delete":{ico:"🗑️",txt:"حذفت من الميثاق"},
+        "focus":{ico:"📌",txt:"غيّرت مادتكم الحالية"}, "focus/clear":{ico:"📌",txt:"أزلت التركيز"},
+        "journey/seed":{ico:"🌱",txt:"استوردت المنهج"},
+      };
+      return MAP[k] || MAP[p[0]] || {ico:"🔔",txt:"نشاط في السايت"};
     }
 
     // ── Group by day ──

@@ -41,6 +41,7 @@
       if(act==="setProg"){ await api("PUT","/resources/"+S.resourceId+"/progress",{ status:node.dataset.val }); renderResource(); return; }
       if(act==="mutabaana"){ S.view="mutabaana"; render(); return; }
       if(act==="setProgId"){ await api("PUT","/resources/"+node.dataset.res+"/progress",{ status:node.dataset.val }); _mtbSig=""; loadMutabaana(); return; }
+      if(act==="mtbFilter"){ S.mtbFilter=node.dataset.f; renderMutabaanaBody(_mtbItems); return; }
       if(act==="setPrio"){ await api("PUT","/resources/"+S.resourceId+"/priority",{ priority:node.dataset.val }); toast("اتحدّثت الأولوية"); renderResource(); return; }
       if(act==="setCat"){ await api("PUT","/resources/"+S.resourceId+"/category",{ category:node.dataset.val }); toast("اتحدّث التصنيف"); renderResource(); return; }
       if(act==="setPlaylist"){ S.playlist=node.dataset.pl; renderJourneys(); return; }
@@ -177,10 +178,21 @@
         const ta=document.getElementById("chatInput"); const t=(ta&&ta.value||"").trim();
         if(!t) return;
         if(ta){ ta.value=""; ta.style.height=""; }
-        try{ await api("POST","/messages",{ text:t }); _chatSig=""; await loadChat(); }
-        catch(e){ if(ta) ta.value=t; toast(errMsg(e)); }
+        try{
+          if(S.chatEdit){ const id=S.chatEdit; S.chatEdit=null; await api("POST","/messages/"+id+"/edit",{ text:t }); }
+          else { await api("POST","/messages",{ text:t, replyTo: S.chatReply?S.chatReply.id:null }); }
+          S.chatReply=null; _chatSig=""; renderComposer(); await loadChat();
+        }catch(e){ if(ta) ta.value=t; toast(errMsg(e)); }
         return;
       }
+      if(act==="chatMenu"){ S.chatMenu = (S.chatMenu===node.dataset.id)?null:node.dataset.id; renderChatMsgs(_chatMsgs, _chatPartnerRead, false); return; }
+      if(act==="chatReply"){ const m=_chatMsgs.find(x=>x.id===node.dataset.id); if(m) S.chatReply={id:m.id,text:m.text}; S.chatMenu=null; renderChatMsgs(_chatMsgs,_chatPartnerRead,false); renderComposer(); return; }
+      if(act==="chatCopy"){ const m=_chatMsgs.find(x=>x.id===node.dataset.id); try{ await navigator.clipboard.writeText(m?m.text:""); toast("اتنسخت الرسالة"); }catch(_){ toast("منعرفش ننسخ"); } S.chatMenu=null; renderChatMsgs(_chatMsgs,_chatPartnerRead,false); return; }
+      if(act==="chatEditStart"){ S.chatEdit=node.dataset.id; S.chatReply=null; S.chatMenu=null; renderChatMsgs(_chatMsgs,_chatPartnerRead,false); renderComposer(); return; }
+      if(act==="chatDelete"){ S.chatMenu=null; await api("POST","/messages/"+node.dataset.id+"/delete"); _chatSig=""; await loadChat(); return; }
+      if(act==="chatCancelCompose"){ S.chatReply=null; S.chatEdit=null; renderComposer(); return; }
+      if(act==="doDrawerSearch"){ const v=(document.getElementById("dwSearch")||{}).value||""; S.searchQ=v.trim(); S.view="search"; closeDrawer(); render(); return; }
+      if(act==="search"){ S.view="search"; render(); return; }
 
       // ---- tasks ----
       if(act==="addTask"){

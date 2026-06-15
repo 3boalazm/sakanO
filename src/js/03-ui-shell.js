@@ -1,17 +1,18 @@
   // ---------- الدرج الجانبي (تقسيم زي زاد) ----------
   const NAVSECS = [
-    { items:[["home","الرئيسية","🏠"]] },
+    { items:[["home","الرئيسية","🏠"],["chat","شاتنا","💌"]] },
     { title:"رحلتنا", items:[["mutabaana","متابعتنا","📊"],["journeys","قوائمنا","▶️"],["library","المكتبة","📚"],["myjourney","رحلتي","🌿"]] },
     { title:"الحوار والقرار", items:[["discussions","المناقشات","💬"],["decisionlog","القرارات","✅"],["charter","ميثاقنا","📜"]] },
-    { title:"حياتنا", items:[["connect","تواصلنا","💞"],["chat","شاتنا","💌"],["quicknotes","مفكّرتنا","📝"],["tasks","المهام","🗒️"],["budget","الميزانية","💰"],["shopping","المشتريات","🛒"]] },
+    { title:"حياتنا", items:[["connect","تواصلنا","💞"],["quicknotes","مفكّرتنا","📝"],["tasks","المهام","🗒️"],["budget","الميزانية","💰"],["shopping","المشتريات","🛒"]] },
     { title:"الإعدادات", items:[["settings","الإعدادات","⚙️"],["logout","خروج","↩️"]] },
   ];
   function renderDrawer(){
     const d = document.getElementById("drawer"); if(!d) return;
     if(!S.token){ d.innerHTML=""; return; }
     const cur = S.view;
-    let html = `<div class="dw-head"><div class="dw-brand">سكن</div><button class="dw-x" data-dw="close" aria-label="إغلاق">✕</button></div>`;
+    let html = `<div class="dw-head"><div class="dw-brand"><span class="brandlogo dw-logo"></span>سكن</div><button class="dw-x" data-dw="close" aria-label="إغلاق">✕</button></div>`;
     if(S.code) html += `<div class="dw-code">كود الميثاق: <b>${esc(S.code)}</b></div>`;
+    html += `<div style="display:flex;gap:6px;margin:8px 12px"><input id="dwSearch" type="search" placeholder="ابحث في كل حاجة…" style="flex:1;min-width:0"><button class="btn sm" data-act="doDrawerSearch" style="flex:none;width:auto;padding:0 13px">🔍</button></div>`;
     html += NAVSECS.map(sec=>{
       const links = sec.items.map(([act,label,ico])=>{
         return `<button class="dw-link ${act===cur?'active':''}" data-act="${act}"><span class="dw-ico">${ico}</span><span>${label}</span></button>`;
@@ -26,6 +27,8 @@
         <button data-set-theme="oled" title="OLED">⚫</button></div>`;
     html += `<div class="dw-foot" style="color:rgba(244,236,214,.5);font-size:12px;text-align:center;margin-top:18px">سكن · مساحتنا إحنا الاتنين 🌿</div>`;
     d.innerHTML = html;
+    const _ds = document.getElementById("dwSearch");
+    if(_ds) _ds.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); go("doDrawerSearch", _ds); } });
     markTheme();
   }
   function openDrawer(){ renderDrawer(); document.getElementById("drawerBg").hidden=false; const d=document.getElementById("drawer"); requestAnimationFrame(()=>{ d.classList.add("open"); document.getElementById("drawerBg").classList.add("open"); }); document.body.style.overflow="hidden"; }

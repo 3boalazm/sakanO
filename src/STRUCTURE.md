@@ -30,8 +30,13 @@ sakanO-main/
 │   │   ├── 05-quicknotes.css   المفكّرة
 │   │   ├── 06-pin-lock.css     قفل PIN للجهاز
 │   │   └── 07-journey.css      رحلتي
-│   ├── js/                   ← فولدر الـ JS
-│   │   ├── app.js             تطبيق الـ SPA كامل (الراوتر + كل الواجهات)
+│   ├── js/                   ← فولدر الـ JS (تطبيق الـ SPA مقسوم لأجزاء نصية مرتّبة)
+│   │   ├── _js_order.json      ترتيب دمج الأجزاء (مصدر الحقيقة للترتيب)
+│   │   ├── 01-config-state.js  الإعداد + كائن الحالة S + قفل الـ PIN
+│   │   ├── 02-helpers-api.js   esc · toast · api() · errMsg · save · logout
+│   │   ├── 03-ui-shell.js      الدرج (renderDrawer) + الهيدر (renderBar) + الثيم
+│   │   ├── 04-views.js         render() + كل الواجهات (ومنها renderMutabaana)
+│   │   ├── 05-app-main.js      go() + مستمع الأحداث + الإقلاع (يغلق الـ IIFE)
 │   │   ├── pwa.js             تسجيل service-worker + نافذة التثبيت
 │   │   └── (legacy) sakan-core.js · sakan-pages1.js · sakan-pages2.js
 │   │                          مصدر ما‑قبل‑الدمج (يرجع له الـ sw.js بالكاش فقط)
@@ -44,7 +49,7 @@ sakanO-main/
 
 ## سير العمل (Workflow)
 
-عدّل المصدر فقط داخل `src/css/*` و `src/js/app.js` و `src/js/pwa.js`، ثم:
+عدّل المصدر فقط داخل `src/css/*` و أجزاء `src/js/*` (حسب `_js_order.json`) و `src/js/pwa.js`، ثم:
 
 ```bash
 npm run build      # = node build.mjs
@@ -52,7 +57,7 @@ npm run build      # = node build.mjs
 
 أداة البناء:
 1. تدمج ملفات `src/css/*` بالترتيب المذكور في `_order.json`.
-2. تحقن الـ CSS و `app.js` و `pwa.js` داخل `index.template.html`.
+2. تدمج أجزاء الـ JS بالترتيب المذكور في `_js_order.json` نصيًا (join بدون فواصل) — فالناتج مطابق بايت‑ببايت لملف واحد؛ الـ IIFE يفتح في الجزء الأول ويُغلق في الأخير. ثم تحقن الـ CSS وناتج الـ JS و `pwa.js` داخل `index.template.html`.
 3. تكتب `src/index.html` (الحزمة).
 4. تُحوّلها base64 وتكتب `lib/page.js` (هذا ما يخدمه السيرفر فعليًا).
 5. تتحقّق من سلامة الـ round-trip وتفشل إن حدث أي اختلاف.

@@ -1,6 +1,6 @@
 // build.mjs — Sakan bundler
 // Reassembles the deployable SPA from modular source:
-//   src/css/*  +  src/js/app.js  +  src/js/pwa.js  ->  src/index.html
+//   src/css/*  +  src/js/* (per _js_order.json)  +  src/js/pwa.js  ->  src/index.html
 // then bakes src/index.html -> lib/page.js (base64) which the server serves.
 //
 // Workflow:  edit files under src/css and src/js, then:  npm run build
@@ -21,8 +21,11 @@ const TOK_PWA = '/*__SAKAN_PWA__*/';
 const cssOrder = JSON.parse(readFileSync(r('src/css/_order.json'), 'utf8'));
 const css = cssOrder.map((f) => readFileSync(r('src/css', f), 'utf8')).join('');
 
-// 2) read JS modules
-const appJs = readFileSync(r('src/js/app.js'), 'utf8');
+// 2) read JS modules — app is assembled from ordered text parts (single shared IIFE).
+//    Parts are concatenated verbatim (join ''), so the result is byte-identical to a
+//    hand-written single file. pwa.js stays a separate injected script.
+const jsOrder = JSON.parse(readFileSync(r('src/js/_js_order.json'), 'utf8'));
+const appJs = jsOrder.map((f) => readFileSync(r('src/js', f), 'utf8')).join('');
 const pwaJs = readFileSync(r('src/js/pwa.js'), 'utf8');
 
 // 3) inject into template

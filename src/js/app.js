@@ -105,7 +105,7 @@
   // ---------- الدرج الجانبي (تقسيم زي زاد) ----------
   const NAVSECS = [
     { items:[["home","الرئيسية","🏠"]] },
-    { title:"رحلتنا", items:[["journeys","قوائمنا","▶️"],["library","المكتبة","📚"],["myjourney","رحلتي","🌿"]] },
+    { title:"رحلتنا", items:[["mutabaana","متابعتنا","📊"],["journeys","قوائمنا","▶️"],["library","المكتبة","📚"],["myjourney","رحلتي","🌿"]] },
     { title:"الحوار والقرار", items:[["discussions","المناقشات","💬"],["decisionlog","القرارات","✅"],["charter","ميثاقنا","📜"]] },
     { title:"حياتنا", items:[["connect","تواصلنا","💞"],["quicknotes","مفكّرتنا","📝"],["tasks","المهام","🗒️"],["budget","الميزانية","💰"],["shopping","المشتريات","🛒"]] },
     { title:"الإعدادات", items:[["settings","الإعدادات","⚙️"],["logout","خروج","↩️"]] },
@@ -162,7 +162,10 @@
   }
 
   // ---------- views ----------
+  let _mtbPoll = null;   // متابعتنا: مؤقّت التحديث الحيّ (polling)
+  let _mtbSig  = "";     // توقيع آخر بيانات لمنع إعادة الرسم بلا داعٍ
   function render(){
+    if(_mtbPoll){ clearInterval(_mtbPoll); _mtbPoll=null; }   // أي تنقّل يوقف الـ polling
     renderBar();
     document.body.classList.toggle("pre-auth", !S.token || S.view==="pinlock");
     if(S.view==="pinlock") return renderPinLock();
@@ -179,6 +182,7 @@
     if(S.view==="shopping") return renderShopping();
     if(S.view==="quicknotes") return renderQuickNotes();
     if(S.view==="myjourney")  return renderMyJourney();
+    if(S.view==="mutabaana")  return renderMutabaana();
     if(S.view==="settings") return renderSettings();
     return renderLibrary();
   }
@@ -280,6 +284,85 @@
   }
 
 
+
+  // ---------- متابعتنا: تتبّع التقدّم الثنائي على المراحل (phase 3) ----------
+  async function loadMutabaana(){
+    let items;
+    try{ items = await api("GET","/resources"); }
+    catch(e){ const b=document.getElementById("mtbBody"); if(b) b.innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`; return; }
+    // توقيع التقدّم فقط — نعيد الرسم لو اتغيّر حاجة (يمنع وميض كل ١٥ث)
+    const sig = items.map(r=>`${r.id}:${(r.prog&&r.prog.mine)||"x"}/${(r.prog&&r.prog.partner)||"x"}`).join("|");
+    const body = document.getElementById("mtbBody");
+    if(sig===_mtbSig && body && body.dataset.ready) return;
+    _mtbSig = sig;
+    renderMutabaanaBody(items);
+  }
+  function renderMutabaanaBody(items){
+    const body = document.getElementById("mtbBody"); if(!body) return;
+    const pct = st => st==="completed"?100:(st==="in_progress"?50:0);
+    const mineDone    = items.filter(r=>r.prog&&r.prog.mine==="completed").length;
+    const partnerDone = items.filter(r=>r.prog&&r.prog.partner==="completed").length;
+    const bothDone    = items.filter(r=>r.prog&&r.prog.mine==="completed"&&r.prog.partner==="completed").length;
+    let html = `<div class="card" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:space-around;text-align:center;padding:16px">
+      <div><div class="display" style="font-size:26px;margin:0">${items.length}</div><div class="muted" style="font-size:12px">إجمالي المواد</div></div>
+      <div><div class="display" style="font-size:26px;margin:0">${bothDone}</div><div class="muted" style="font-size:12px">خلّصناه سوا</div></div>
+      <div><div class="display" style="font-size:26px;margin:0">${mineDone}</div><div class="muted" style="font-size:12px">أنا</div></div>
+      <div><div class="display" style="font-size:26px;margin:0">${partnerDone}</div><div class="muted" style="font-size:12px">شريكي</div></div>
+    </div>`;
+    // مجمّعة على المراحل الست؛ بلا مرحلة → "أخرى"
+    const groups = STAGES.map(s=>({ n:s.n, title:s.title, theme:s.theme, items: items.filter(r=> Number(r.stage)===s.n) }));
+    const noStage = items.filter(r=> r.stage==null || Number.isNaN(Number(r.stage)));
+    if(noStage.length) groups.push({ n:-1, title:"أخرى", theme:"مواد مضافة يدويًا بلا مرحلة.", items:noStage });
+    let any=false;
+    const barTrack = "flex:1;height:8px;border-radius:99px;background:var(--line);overflow:hidden";
+    for(const g of groups){
+      if(!g.items.length) continue; any=true;
+      const done = g.items.filter(r=>r.prog&&r.prog.mine==="completed"&&r.prog.partner==="completed").length;
+      html += `<div class="cat-h"><span class="cat-ic">🗺️</span><div><div class="cat-t">${esc(g.title)}</div><div class="cat-s">${esc(g.theme)} — <b>${done}/${g.items.length}</b> خلّصناه معًا</div></div></div>`;
+      const sorted = g.items.slice().sort((a,b)=> (a.order||999)-(b.order||999) || (a.createdAt||0)-(b.createdAt||0));
+      for(const r of sorted){
+        const p = r.prog || {mine:"not_started",partner:"not_started"};
+        const mp = pct(p.mine), pp = pct(p.partner);
+        const sBtn = (val,lbl)=>`<button data-act="setProgId" data-res="${esc(r.id)}" data-val="${val}" style="width:auto;padding:0 11px" class="${p.mine===val?"on":""}">${lbl}</button>`;
+        html += `<div class="card res" data-id="${esc(r.id)}" style="display:block">
+          <div style="display:flex;gap:10px;align-items:center;min-width:0">
+            <span style="font-size:20px;flex:none">${TYPE_ICON[r.type]||"📄"}</span>
+            <div style="min-width:0;flex:1"><h2 style="margin:0;font-size:16px">${ytMark(r)}${esc(r.title)}</h2>
+              <div class="meta">${r.speaker?esc(r.speaker):""}</div></div>
+          </div>
+          <div style="margin:10px 0 8px">
+            <div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+              <span class="muted" style="flex:none;width:48px;font-size:12px">مصطفى</span>
+              <span style="${barTrack}"><i style="display:block;height:100%;width:${mp}%;border-radius:99px;background:linear-gradient(90deg,var(--brand-mid,#1a5d47),var(--brand-deep,#0e3b2e));transition:width .35s"></i></span>
+              <span class="muted" style="flex:none;width:34px;text-align:left;font-size:12px">${mp}%</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+              <span class="muted" style="flex:none;width:48px;font-size:12px">ضحى</span>
+              <span style="${barTrack}"><i style="display:block;height:100%;width:${pp}%;border-radius:99px;background:var(--brand-gold,#c9a14a);transition:width .35s"></i></span>
+              <span class="muted" style="flex:none;width:34px;text-align:left;font-size:12px">${pp}%</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span class="muted" style="flex:none;font-size:12px">متابعتي:</span>
+            <div class="themesw">${sBtn("not_started","لم أبدأ")}${sBtn("in_progress","أتابع")}${sBtn("completed","أكملت ✓")}</div>
+            <span class="spacer" style="flex:1"></span>
+            <button class="linkbtn" data-openq="${esc(r.id)}">💬 مناقشة</button>
+          </div>
+        </div>`;
+      }
+    }
+    if(!any) html += `<div class="empty">لسه مفيش مواد. استورد المنهج من «قوائمنا» الأول 🌿</div>`;
+    body.innerHTML = html;
+    body.dataset.ready = "1";
+  }
+  function renderMutabaana(){
+    S.view="mutabaana"; S.resourceId=null;
+    el.innerHTML = pageTitle("متابعتنا","شوف إنت وضحى وصلتوا لفين في كل مرحلة — والتحديثات بتظهر تلقائيًا كل شوية 🌿")
+      + `<div id="mtbBody"><div class="empty">…تحميل</div></div>`;
+    _mtbSig = "";
+    loadMutabaana();
+    _mtbPoll = setInterval(()=>{ if(S.view!=="mutabaana"){ clearInterval(_mtbPoll); _mtbPoll=null; return; } loadMutabaana(); }, 15000);
+  }
 
   // ========== PIN Lock ==========
   function getNameSVG(who){
@@ -1206,6 +1289,8 @@
       if(act==="library"){ S.view="library"; S.tab="summary"; render(); return; }
 
       if(act==="setProg"){ await api("PUT","/resources/"+S.resourceId+"/progress",{ status:node.dataset.val }); renderResource(); return; }
+      if(act==="mutabaana"){ S.view="mutabaana"; render(); return; }
+      if(act==="setProgId"){ await api("PUT","/resources/"+node.dataset.res+"/progress",{ status:node.dataset.val }); _mtbSig=""; loadMutabaana(); return; }
       if(act==="setPrio"){ await api("PUT","/resources/"+S.resourceId+"/priority",{ priority:node.dataset.val }); toast("اتحدّثت الأولوية"); renderResource(); return; }
       if(act==="setCat"){ await api("PUT","/resources/"+S.resourceId+"/category",{ category:node.dataset.val }); toast("اتحدّث التصنيف"); renderResource(); return; }
       if(act==="setPlaylist"){ S.playlist=node.dataset.pl; renderJourneys(); return; }

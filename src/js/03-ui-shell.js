@@ -150,12 +150,13 @@
   }
   function openFab(){
     S.fabOpen = true;
+    const bg=document.getElementById("fabBg"); if(bg) bg.hidden=false;
     const p=document.getElementById("fabPanel"); if(p) p.hidden=false;
     renderFab(); renderComposer(); _chatSig=""; loadChat();
     if(_fabPoll) clearInterval(_fabPoll);
     _fabPoll = setInterval(()=>{ if(!S.fabOpen){ clearInterval(_fabPoll); _fabPoll=null; return; } loadChat(); }, 4000);
   }
-  function closeFab(){ S.fabOpen=false; const p=document.getElementById("fabPanel"); if(p) p.hidden=true; if(_fabPoll){ clearInterval(_fabPoll); _fabPoll=null; } applyBadges(); }
+  function closeFab(){ S.fabOpen=false; const p=document.getElementById("fabPanel"); if(p) p.hidden=true; const bg=document.getElementById("fabBg"); if(bg) bg.hidden=true; if(_fabPoll){ clearInterval(_fabPoll); _fabPoll=null; } applyBadges(); }
 
   // ---------- header ----------
   function renderBar(){

@@ -286,6 +286,13 @@
     if(cat){ [...cat.parentElement.children].forEach(x=>x.classList.toggle("on", x===cat)); return; }
   });
 
+  // مَخرج إضافي: زر Escape يقفل الشات العائم أو لوحة الإشعارات لو مفتوحة
+  document.addEventListener("keydown",(ev)=>{
+    if(ev.key!=="Escape") return;
+    if(S.fabOpen){ closeFab(); return; }
+    const np=document.getElementById("ntfPanel"); if(np && !np.hidden){ closeNotif(); }
+  });
+
   document.getElementById("foot").innerHTML = "سكن · مساحتنا إحنا الاتنين — خاصّة بطبيعتها، من غير مشاركة عامة.";
 
   // نبضة موحّدة: تحدّث حضوري، تجيب حضور شريكي + الإشعارات، تحدّث الشارات، وتشغّل صوت لو في رسالة جديدة

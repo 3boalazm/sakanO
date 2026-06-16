@@ -557,7 +557,7 @@
     if(!res.ok){
       const code = data && data.error ? data.error.code : ("HTTP_"+res.status);
       if((code==="UNAUTHENTICATED" || res.status===401) && S.token){
-        S.token=null; S.code=null; save(); closeFab(); S.view="onboarding"; render(); toast("انتهت الجلسة — سجّل دخولك تاني");
+        S.token=null; S.code=null; save(); S.view="onboarding"; render(); toast("انتهت الجلسة — سجّل دخولك تاني");
       }
       const e=new Error(code); e.code=code; e.data=data; throw e;
     }
@@ -599,7 +599,7 @@
     localStorage.removeItem("sakan_token"); localStorage.removeItem("sakan_code");
     localStorage.removeItem("sakan_name"); localStorage.removeItem(PIN_KEY); localStorage.removeItem(PIN_WHO);
     S.token=S.code=S.name=null; S.pinEntry=""; S.pinWho=null;
-    S.view="onboarding"; closeDrawer(); closeFab(); render();
+    S.view="onboarding"; closeDrawer(); render();
   }
 
   // ---------- الدرج الجانبي (تقسيم زي زاد) ----------
@@ -760,7 +760,7 @@
     renderFab(); renderComposer(); _chatSig=""; loadChat();
     try{ history.pushState({sakanFab:true}, ""); _fabHist=true; }catch(_){ _fabHist=false; }
     if(_fabPoll) clearInterval(_fabPoll);
-    _fabPoll = setInterval(()=>{ if(!S.fabOpen){ clearInterval(_fabPoll); _fabPoll=null; return; } loadChat(); }, 10000);
+    _fabPoll = setInterval(()=>{ if(!S.fabOpen){ clearInterval(_fabPoll); _fabPoll=null; return; } loadChat(); }, 4000);
   }
   function closeFab(fromPop){
     if(!S.fabOpen && !_fabHist) return;
@@ -803,8 +803,6 @@
     markTheme();
   }
 
-// ===== سكن · النواة: الحالة المشتركة + موجّه render + مساعدات عامة =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   // ---------- views ----------
   let _mtbPoll = null;   // متابعتنا: مؤقّت التحديث الحيّ (polling)
   let _chatPoll = null;  // شاتنا: مؤقّت التحديث الحيّ (polling)
@@ -826,7 +824,7 @@
     renderBar();
     document.body.classList.toggle("pre-auth", !S.token || S.view==="pinlock");
     if(S.view==="pinlock") return renderPinLock();
-    if(!S.token){ closeFab(); return renderOnboarding(); }
+    if(!S.token){ return renderOnboarding(); }
     if(S.view==="resource" && S.resourceId){ return renderResource(); }
     if(S.view==="home") return renderHome();
     if(S.view==="journeys") return renderJourneys();
@@ -905,8 +903,6 @@
   }
 
 
-// ===== سكن · قوائمنا (journeys) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function renderJourneys(){
     S.view="journeys"; S.resourceId=null;
     if(!S.playlist) S.playlist="youtube";
@@ -953,8 +949,6 @@
 
 
   // ---------- متابعتنا: تتبّع التقدّم الثنائي على المراحل (phase 3) ----------
-// ===== سكن · متابعتنا (mutabaana) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function loadMutabaana(){
     let items;
     try{ items = await api("GET","/resources"); }
@@ -1042,12 +1036,10 @@
       + `<div id="mtbBody"><div class="empty">…تحميل</div></div>`;
     _mtbSig = "";
     loadMutabaana();
-    _mtbPoll = setInterval(()=>{ if(S.view!=="mutabaana"){ clearInterval(_mtbPoll); _mtbPoll=null; return; } loadMutabaana(); }, 30000);
+    _mtbPoll = setInterval(()=>{ if(S.view!=="mutabaana"){ clearInterval(_mtbPoll); _mtbPoll=null; return; } loadMutabaana(); }, 15000);
   }
 
   // ---------- شاتنا: محادثة خاصة ١:١ زيّ تيليجرام (server-mediated + polling) ----------
-// ===== سكن · شاتنا — الشات العائم (chat) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function loadChat(){
     let res;
     try{ res = await api("GET","/messages"); }
@@ -1120,12 +1112,10 @@
     renderComposer();
     renderChatPresence();
     loadChat();
-    _chatPoll = setInterval(()=>{ if(S.view!=="chat"){ clearInterval(_chatPoll); _chatPoll=null; return; } loadChat(); }, 10000);
+    _chatPoll = setInterval(()=>{ if(S.view!=="chat"){ clearInterval(_chatPoll); _chatPoll=null; return; } loadChat(); }, 4000);
   }
 
   // ---------- دردشة المورد: نقاش حرّ خاص بكل حلقة/فيديو ----------
-// ===== سكن · نقاش المورد (resource chat) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   function renderResChat(){
     const t = document.getElementById("tab"); if(!t) return;
     t.innerHTML = `<div class="card" style="padding:10px">
@@ -1139,7 +1129,7 @@
     _rcSig = "";
     loadResChat();
     if(_rcPoll) clearInterval(_rcPoll);
-    _rcPoll = setInterval(()=>{ if(S.view!=="resource" || S.tab!=="chat"){ clearInterval(_rcPoll); _rcPoll=null; return; } loadResChat(); }, 15000);
+    _rcPoll = setInterval(()=>{ if(S.view!=="resource" || S.tab!=="chat"){ clearInterval(_rcPoll); _rcPoll=null; return; } loadResChat(); }, 8000);
   }
   async function loadResChat(){
     const rid = S.resourceId; if(!rid) return;
@@ -1175,8 +1165,6 @@
   }
 
   // ---------- بحث شامل في كل حاجة ----------
-// ===== سكن · البحث (search) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function renderSearch(){
     S.view="search"; S.resourceId=null;
     el.innerHTML = pageTitle("بحث","دوّر في كل حاجة في سكن — موارد، أسئلة نقاش، قرارات، ومهام.")
@@ -1213,8 +1201,6 @@
     return src ? src.outerHTML : "";
   }
 
-// ===== سكن · قفل الـ PIN (pinlock) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   function renderPinLock(){
     S.view="pinlock";
     document.body.classList.add("pre-auth");
@@ -1345,8 +1331,6 @@
 
   // ========== QuickNotes (مفكّرتنا) ==========
   // localStorage helpers — بتشتغل من غير backend
-// ===== سكن · مفكّرتنا (quicknotes) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   function qnKey(scope){ return "sakan_qn_" + scope + "_" + (S.code||"local"); }
   function qnLoad(scope){ try{ return JSON.parse(localStorage.getItem(qnKey(scope))||"[]"); }catch(e){ return []; } }
   function qnSave(scope, arr){ try{ localStorage.setItem(qnKey(scope), JSON.stringify(arr)); }catch(e){} }
@@ -1429,8 +1413,6 @@
     S.qnPanel=scope; renderQuickNotes();
   }
 
-// ===== سكن · الرئيسية (home) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function renderHome(){
     S.view="home"; S.resourceId=null;
     el.innerHTML = greetHero()
@@ -1465,8 +1447,6 @@
     }catch(e){ document.getElementById("loops").innerHTML = `<div class="empty">${esc(errMsg(e))}</div>`; }
   }
 
-// ===== سكن · المهام (tasks) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function renderTasks(){
     S.view="tasks"; S.resourceId=null;
     el.innerHTML = pageTitle("المهام ومخطّط الفرح","كل مهمة: اسمها، تفاصيلها، وطريقة نتابع بيها إنجازها — إحنا فريق واحد.") + `
@@ -1529,8 +1509,6 @@
     }catch(e){ document.getElementById("tList").innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`; }
   }
 
-// ===== سكن · الميزانية (budget) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function renderBudget(){
     S.view="budget"; S.resourceId=null;
     el.innerHTML = pageTitle("الميزانية المشتركة","نتتبّع فلوسنا رايحة فين: مخطّط، مدفوع، ومتبقّي.") + `
@@ -1561,8 +1539,6 @@
     }catch(e){ document.getElementById("bList").innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`; }
   }
 
-// ===== سكن · المشتريات (shopping) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function renderShopping(){
     S.view="shopping"; S.resourceId=null;
     el.innerHTML = pageTitle("قائمة المشتريات","قائمة حيّة لبيتنا — الشطب بيظهر للاتنين.") + `
@@ -1584,8 +1560,6 @@
     }catch(e){ document.getElementById("sList").innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`; }
   }
 
-// ===== سكن · الإعدادات (settings) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function renderSettings(){
     S.view="settings"; S.resourceId=null;
     const pinSet = !!localStorage.getItem(PIN_KEY);
@@ -1631,8 +1605,6 @@
     ev.target.value=""; S.view="home"; render();
   }
 
-// ===== سكن · الدخول/الإنشاء (onboarding) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   function authField(ico, id, type, ph, val, eye){
     return `<div class="auth-field"><span class="af-ico">${ico}</span>`
       + `<input id="${id}" type="${type}" ${type==='email'?'inputmode="email"':''} placeholder="${ph}" value="${val||''}">`
@@ -1675,8 +1647,6 @@
     </div>`;
   }
 
-// ===== سكن · المكتبة + تفاصيل المورد (library/resource) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   const APP_URL = location.origin;
   const NB_PROMPT = `أنت تعمل كمحلل محتوى خبير لمشروع «سكن»، نظام تشغيل خاص للأزواج يهدف لتعزيز التوافق (Alignment) عبر التعلّم المنظّم والنقاش الهادف وتوثيق القرارات. مهمتك: تحويل المحتوى المقدَّم (رابط فيديو أو نص) إلى معرفة منظّمة وقابلة للتطبيق ومحفّزة للنقاش بين الزوجين.
 
@@ -1903,8 +1873,6 @@
     }).join("");
   }
 
-// ===== سكن · قرارات المورد (decisions) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   const CAT_AR = { general:"عام", financial:"مالي", family:"عائلي", life:"حياتي" };
   function decCard(d, opts){
     const inResource = opts && opts.inResource;
@@ -1950,8 +1918,6 @@
   }
 
   // ========== رحلتي ==========
-// ===== سكن · رحلتي (myjourney) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function renderMyJourney(){
     S.view="myjourney"; S.resourceId=null;
     el.innerHTML = pageTitle("رحلتي 🌿","خطواتك إنت بس — مش بيشوفها حد غيرك.")
@@ -2036,8 +2002,6 @@
   }
 
 
-// ===== سكن · كل المناقشات (discussions) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function renderDiscussionsAll(){
     S.view="discussions"; S.resourceId=null;
     el.innerHTML = pageTitle("المناقشات","كل الأسئلة من موادنا في مكان واحد.") + `<div id="dscBody"><div class="empty">…تحميل</div></div>`;
@@ -2055,8 +2019,6 @@
     }catch(e){ document.getElementById("dscBody").innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`; }
   }
 
-// ===== سكن · سجلّ القرارات (decisionlog) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   async function renderDecisionLog(){
     S.view="decisionlog"; S.resourceId=null;
     el.innerHTML = pageTitle("سجل القرارات","كل ما اتفقنا عليه — مرتّب ودائم.") + `<div id="decBody"><div class="empty">…تحميل</div></div>`;
@@ -2068,8 +2030,6 @@
   }
 
   // ---------- phase 5: التواصل ----------
-// ===== سكن · تواصلنا + ميثاقنا (connect/charter) =====
-// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   const MOOD_OPT = [["great","😍 رائعة"],["good","🙂 جيدة"],["ok","😐 عادية"],["low","😟 متعبة"]];
   const moodLabel = (v)=> (MOOD_OPT.find(m=>m[0]===v)||["","—"])[1];
   async function renderCharter(){
@@ -2513,7 +2473,7 @@
     renderPresence(); renderChatPresence(); if(S.fabOpen) renderFab(); applyBadges();
   }
   tick();
-  setInterval(()=>{ if(document.visibilityState!=="hidden") tick(); }, 60000);
+  setInterval(()=>{ if(document.visibilityState!=="hidden") tick(); }, 15000);
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") tick(); });
 
   render();

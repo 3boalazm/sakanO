@@ -156,7 +156,7 @@
     renderFab(); renderComposer(); _chatSig=""; loadChat();
     try{ history.pushState({sakanFab:true}, ""); _fabHist=true; }catch(_){ _fabHist=false; }
     if(_fabPoll) clearInterval(_fabPoll);
-    _fabPoll = setInterval(()=>{ if(!S.fabOpen){ clearInterval(_fabPoll); _fabPoll=null; return; } loadChat(); }, 10000);
+    _fabPoll = setInterval(()=>{ if(!S.fabOpen){ clearInterval(_fabPoll); _fabPoll=null; return; } loadChat(); }, 4000);
   }
   function closeFab(fromPop){
     if(!S.fabOpen && !_fabHist) return;

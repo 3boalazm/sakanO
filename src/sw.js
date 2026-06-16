@@ -1,17 +1,16 @@
 // سكن — Service Worker
 // نسخة: 1.0.0  |  تاريخ البناء: يُحدَّث تلقائيًا
 
-const CACHE_NAME    = 'sakan-v1';
-const STATIC_CACHE  = 'sakan-static-v1';
-const DYNAMIC_CACHE = 'sakan-dynamic-v1';
+const CACHE_NAME    = 'sakan-v2';
+const STATIC_CACHE  = 'sakan-static-v2';
+const DYNAMIC_CACHE = 'sakan-dynamic-v2';
 
-// ملفات الشل — تُخزَّن دائمًا
+// ملفات الشل — تُخزَّن دائمًا.
+// ملاحظة: التطبيق كله مدموج داخل index.html (مفيش ملفات JS منفصلة تُخدَم على الشبكة)،
+// فبنكتفي بالشل + الأصول. أي ملفات JS قديمة اتشالت.
 const SHELL_FILES = [
   '/',
   '/index.html',
-  '/js/sakan-core.js',
-  '/js/sakan-pages1.js',
-  '/js/sakan-pages2.js',
   '/media/auth-bg.jpg',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',

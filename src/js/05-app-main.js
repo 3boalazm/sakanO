@@ -240,18 +240,6 @@
         return;
       }
       if(act==="doRestore"){ const rf=document.getElementById("restoreFile"); if(rf) rf.click(); return; }
-      if(act==="toggleNotif"){ const p=document.getElementById("ntfPanel"); if(p && !p.hidden) closeNotif(); else openNotif(); return; }
-      if(act==="closeNotif"){ closeNotif(); return; }
-      if(act==="toggleFab"){ if(S.fabOpen) closeFab(); else openFab(); return; }
-      if(act==="closeFab"){ closeFab(); return; }
-      if(act==="notifGo"){
-        const target=node.dataset.target, res=node.dataset.res||"";
-        closeNotif();
-        if(target==="chat"){ openFab(); return; }
-        if(target==="resChat" && res){ S.resourceId=res; S.view="resource"; S.tab="chat"; render(); return; }
-        if(res){ S.resourceId=res; S.view="resource"; S.tab="summary"; render(); return; }
-        return go(target||"home");
-      }
     }catch(e){
       if(e.code==="UNAUTHENTICATED"){ toast(errMsg(e)); return logout(); }
       toast(errMsg(e));
@@ -280,32 +268,14 @@
 
   document.getElementById("foot").innerHTML = "سكن · مساحتنا إحنا الاتنين — خاصّة بطبيعتها، من غير مشاركة عامة.";
 
-  // نبضة موحّدة: تحدّث حضوري، تجيب حضور شريكي + الإشعارات، تحدّث الشارات، وتشغّل صوت لو في رسالة جديدة
-  let _audioCtx = null;
-  function playBlip(){
-    try{
-      const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
-      _audioCtx = _audioCtx || new AC();
-      if(_audioCtx.state==="suspended") _audioCtx.resume();
-      const now=_audioCtx.currentTime;
-      const beep=(f,t0,dur,vol)=>{ const o=_audioCtx.createOscillator(), g=_audioCtx.createGain(); o.type="sine"; o.frequency.value=f; g.gain.setValueAtTime(0.0001,now+t0); g.gain.exponentialRampToValueAtTime(vol,now+t0+0.02); g.gain.exponentialRampToValueAtTime(0.0001,now+t0+dur); o.connect(g); g.connect(_audioCtx.destination); o.start(now+t0); o.stop(now+t0+dur+0.02); };
-      beep(660,0,0.32,0.16); beep(880,0.13,0.34,0.13);
-    }catch(_){}
-  }
-  async function tick(){
+  // نبضة الحضور: تحدّث آخر ظهوري وتجيب ظهور شريكي (كل ٢٥ث، وتقف لو التطبيق مخفي)
+  async function heartbeat(){
     if(!S.token) return;
-    try{ S.presence = await api("POST","/presence",{}); }catch(_){}
-    try{
-      const u = await api("GET","/updates");
-      const prev = (S._prevChat==null) ? null : S._prevChat;
-      S.updates = u; S._prevChat = u.chatUnread||0;
-      if(prev!=null && (u.chatUnread||0) > prev && !S.fabOpen && S.view!=="chat") playBlip();
-    }catch(_){}
-    renderPresence(); renderChatPresence(); if(S.fabOpen) renderFab(); applyBadges();
+    try{ S.presence = await api("POST","/presence",{}); renderPresence(); }catch(_){}
   }
-  tick();
-  setInterval(()=>{ if(document.visibilityState!=="hidden") tick(); }, 15000);
-  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") tick(); });
+  heartbeat();
+  setInterval(()=>{ if(document.visibilityState!=="hidden") heartbeat(); }, 25000);
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") heartbeat(); });
 
   render();
 })();

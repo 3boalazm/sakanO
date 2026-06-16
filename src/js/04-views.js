@@ -9,10 +9,12 @@
   let _rcPoll = null;    // دردشة المورد: مؤقّت التحديث الحيّ
   let _rcSig  = "";      // توقيع آخر رسائل دردشة المورد
   let _rcMsgs = [];      // آخر رسائل دردشة المورد المحمّلة
+  let _fabPoll = null;   // الشات العائم: مؤقّت التحديث الحيّ
   function render(){
     if(_mtbPoll){ clearInterval(_mtbPoll); _mtbPoll=null; }   // أي تنقّل يوقف الـ polling
     if(_chatPoll){ clearInterval(_chatPoll); _chatPoll=null; }
     if(_rcPoll){ clearInterval(_rcPoll); _rcPoll=null; }
+    closeNotif();
     renderBar();
     document.body.classList.toggle("pre-auth", !S.token || S.view==="pinlock");
     if(S.view==="pinlock") return renderPinLock();
@@ -260,7 +262,7 @@
       const mine = !!m.mine;
       const hh = new Date(m.createdAt).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});
       const ticks = (mine && !m.deleted) ? (m.createdAt<=partnerRead ? "✓✓" : "✓") : "";
-      const bub = mine ? `background:${meBg};color:#fff;margin-inline-start:auto;border-end-end-radius:5px` : `background:var(--card-2,#f1ede1);color:var(--ink);margin-inline-end:auto;border-end-start-radius:5px`;
+      const bub = mine ? `background:${meBg};color:#fff;margin-inline-end:auto;border-end-start-radius:5px` : `background:var(--card-2,#f1ede1);color:var(--ink);margin-inline-start:auto;border-end-end-radius:5px`;
       const reply = m.replyText ? `<div style="border-inline-start:3px solid ${mine?'rgba(255,255,255,.6)':'var(--brand-gold,#c9a14a)'};padding-inline-start:7px;margin-bottom:4px;font-size:12.5px;opacity:.85;white-space:pre-wrap;word-break:break-word">${esc(m.replyText)}</div>` : "";
       const body = m.deleted ? `<i style="opacity:.7">🚫 رسالة محذوفة</i>` : esc(m.text);
       html += `<div style="display:flex;margin:4px 0">
@@ -295,12 +297,14 @@
   function renderChat(){
     S.view="chat"; S.resourceId=null; S.chatReply=null; S.chatEdit=null; S.chatMenu=null;
     el.innerHTML = pageTitle("شاتنا","مساحة خاصة بينك وبين شريكك — زيّ الشات العادي، بتتحدّث تلقائيًا 🌿")
+      + `<div id="chatPresence" class="card tight" style="display:flex;align-items:center;font-size:13px;margin-bottom:10px;padding:8px 12px"></div>`
       + `<div class="card" style="padding:10px">
           <div id="chatScroll" style="height:min(58vh,460px);overflow-y:auto;padding:4px 6px"><div class="empty">…تحميل</div></div>
           <div id="chatComposer" style="margin-top:8px"></div>
         </div>`;
     _chatSig = "";
     renderComposer();
+    renderChatPresence();
     loadChat();
     _chatPoll = setInterval(()=>{ if(S.view!=="chat"){ clearInterval(_chatPoll); _chatPoll=null; return; } loadChat(); }, 4000);
   }
@@ -342,7 +346,7 @@
     for(const m of msgs){
       const mine = !!m.mine;
       const hh = new Date(m.createdAt).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});
-      const bub = mine ? `background:${meBg};color:#fff;margin-inline-start:auto;border-end-end-radius:5px` : `background:var(--card-2,#f1ede1);color:var(--ink);margin-inline-end:auto;border-end-start-radius:5px`;
+      const bub = mine ? `background:${meBg};color:#fff;margin-inline-end:auto;border-end-start-radius:5px` : `background:var(--card-2,#f1ede1);color:var(--ink);margin-inline-start:auto;border-end-end-radius:5px`;
       const body = m.deleted ? `<i style="opacity:.7">🚫 محذوفة</i>` : esc(m.text);
       const del = (mine && !m.deleted) ? ` · <button class="linkbtn" data-act="delResMsg" data-id="${esc(m.id)}" style="font-size:10.5px;opacity:.75">حذف</button>` : "";
       html += `<div style="display:flex;margin:4px 0"><div style="max-width:82%;padding:8px 12px;border-radius:16px;${bub};box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,.08))">

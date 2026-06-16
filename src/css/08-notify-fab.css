@@ -1,5 +1,9 @@
 /* ===== جرس الإشعارات + الشات العائم (ماسنجر) ===== */
 
+/* مهم: السمة [hidden] لازم تتغلّب على display:flex بتاع اللوحات،
+   وإلا تفضل اللوحة ظاهرة وميقفلهاش زرّ الإغلاق (ده كان سبب إن الشات مبيقفلش). */
+.ntf-bg[hidden], .ntf-panel[hidden], .fab-bg[hidden], .fab-panel[hidden]{ display:none !important; }
+
 /* الشارة (badge) المشتركة على الجرس والـ FAB */
 .badge{
   position:absolute; top:-5px; inset-inline-end:-5px;
@@ -35,7 +39,7 @@
 
 /* زرّ الشات العائم */
 .fab{
-  position:fixed; z-index:55; inset-block-end:18px; inset-inline-start:18px;
+  position:fixed; z-index:58; inset-block-end:18px; inset-inline-start:18px;
   width:56px; height:56px; border-radius:50%; border:0; cursor:pointer;
   background:linear-gradient(135deg, var(--brand-mid,#1a5d47), var(--brand-deep,#0e3b2e));
   color:#fff; font-size:24px; display:flex; align-items:center; justify-content:center;

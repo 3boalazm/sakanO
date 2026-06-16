@@ -386,6 +386,10 @@
   .jrn-time{ font-size:11.5px; color:var(--muted-2); flex:none; margin-inline-start:auto; }
 /* ===== جرس الإشعارات + الشات العائم (ماسنجر) ===== */
 
+/* مهم: السمة [hidden] لازم تتغلّب على display:flex بتاع اللوحات،
+   وإلا تفضل اللوحة ظاهرة وميقفلهاش زرّ الإغلاق (ده كان سبب إن الشات مبيقفلش). */
+.ntf-bg[hidden], .ntf-panel[hidden], .fab-bg[hidden], .fab-panel[hidden]{ display:none !important; }
+
 /* الشارة (badge) المشتركة على الجرس والـ FAB */
 .badge{
   position:absolute; top:-5px; inset-inline-end:-5px;
@@ -421,7 +425,7 @@
 
 /* زرّ الشات العائم */
 .fab{
-  position:fixed; z-index:55; inset-block-end:18px; inset-inline-start:18px;
+  position:fixed; z-index:58; inset-block-end:18px; inset-inline-start:18px;
   width:56px; height:56px; border-radius:50%; border:0; cursor:pointer;
   background:linear-gradient(135deg, var(--brand-mid,#1a5d47), var(--brand-deep,#0e3b2e));
   color:#fff; font-size:24px; display:flex; align-items:center; justify-content:center;
@@ -749,14 +753,25 @@
       <div class="fab-foot" id="chatComposer"></div>`;
   }
   function openFab(){
+    if(S.fabOpen) return;
     S.fabOpen = true;
     const bg=document.getElementById("fabBg"); if(bg) bg.hidden=false;
     const p=document.getElementById("fabPanel"); if(p) p.hidden=false;
     renderFab(); renderComposer(); _chatSig=""; loadChat();
+    try{ history.pushState({sakanFab:true}, ""); _fabHist=true; }catch(_){ _fabHist=false; }
     if(_fabPoll) clearInterval(_fabPoll);
     _fabPoll = setInterval(()=>{ if(!S.fabOpen){ clearInterval(_fabPoll); _fabPoll=null; return; } loadChat(); }, 4000);
   }
-  function closeFab(){ S.fabOpen=false; const p=document.getElementById("fabPanel"); if(p) p.hidden=true; const bg=document.getElementById("fabBg"); if(bg) bg.hidden=true; if(_fabPoll){ clearInterval(_fabPoll); _fabPoll=null; } applyBadges(); }
+  function closeFab(fromPop){
+    if(!S.fabOpen && !_fabHist) return;
+    S.fabOpen=false;
+    const p=document.getElementById("fabPanel"); if(p) p.hidden=true;
+    const bg=document.getElementById("fabBg"); if(bg) bg.hidden=true;
+    if(_fabPoll){ clearInterval(_fabPoll); _fabPoll=null; }
+    applyBadges();
+    // لو الإغلاق مش جاي من زر الباك، نشيل حالة الـ history اللي دفعناها
+    if(_fabHist){ _fabHist=false; if(!fromPop){ try{ history.back(); }catch(_){} } }
+  }
 
   // ---------- header ----------
   function renderBar(){
@@ -800,6 +815,7 @@
   let _rcSig  = "";      // توقيع آخر رسائل دردشة المورد
   let _rcMsgs = [];      // آخر رسائل دردشة المورد المحمّلة
   let _fabPoll = null;   // الشات العائم: مؤقّت التحديث الحيّ
+  let _fabHist = false;  // الشات العائم: هل دفعنا حالة في الـ history (لزر الباك)
   function render(){
     if(_mtbPoll){ clearInterval(_mtbPoll); _mtbPoll=null; }   // أي تنقّل يوقف الـ polling
     if(_chatPoll){ clearInterval(_chatPoll); _chatPoll=null; }
@@ -2427,6 +2443,9 @@
     if(S.fabOpen){ closeFab(); return; }
     const np=document.getElementById("ntfPanel"); if(np && !np.hidden){ closeNotif(); }
   });
+
+  // زر الرجوع (back) أو جيتشر الرجوع يقفل الشات العائم بدل ما يطلّع من التطبيق
+  window.addEventListener("popstate",()=>{ if(S.fabOpen) closeFab(true); });
 
   document.getElementById("foot").innerHTML = "سكن · مساحتنا إحنا الاتنين — خاصّة بطبيعتها، من غير مشاركة عامة.";
 

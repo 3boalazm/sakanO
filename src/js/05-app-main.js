@@ -293,6 +293,9 @@
     const np=document.getElementById("ntfPanel"); if(np && !np.hidden){ closeNotif(); }
   });
 
+  // زر الرجوع (back) أو جيتشر الرجوع يقفل الشات العائم بدل ما يطلّع من التطبيق
+  window.addEventListener("popstate",()=>{ if(S.fabOpen) closeFab(true); });
+
   document.getElementById("foot").innerHTML = "سكن · مساحتنا إحنا الاتنين — خاصّة بطبيعتها، من غير مشاركة عامة.";
 
   // نبضة موحّدة: تحدّث حضوري، تجيب حضور شريكي + الإشعارات، تحدّث الشارات، وتشغّل صوت لو في رسالة جديدة

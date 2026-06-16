@@ -10,6 +10,7 @@
   let _rcSig  = "";      // توقيع آخر رسائل دردشة المورد
   let _rcMsgs = [];      // آخر رسائل دردشة المورد المحمّلة
   let _fabPoll = null;   // الشات العائم: مؤقّت التحديث الحيّ
+  let _fabHist = false;  // الشات العائم: هل دفعنا حالة في الـ history (لزر الباك)
   function render(){
     if(_mtbPoll){ clearInterval(_mtbPoll); _mtbPoll=null; }   // أي تنقّل يوقف الـ polling
     if(_chatPoll){ clearInterval(_chatPoll); _chatPoll=null; }

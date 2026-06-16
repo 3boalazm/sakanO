@@ -1,10 +1,13 @@
 /* ===== الهامبرجر + الدرّ هو المنيو ===== */
   .hamburger{display:flex; align-items:center; justify-content:center; flex:none; background:var(--primary-soft); border:none; color:var(--ink); font-size:22px; cursor:pointer; width:42px; height:42px; border-radius:12px; line-height:1}
   .hamburger:hover{filter:brightness(.96)}
+  .notif-m{display:flex; align-items:center; justify-content:center; flex:none; margin-inline-start:auto; background:var(--primary-soft); border:none; color:var(--ink); font-size:18px; cursor:pointer; width:42px; height:42px; border-radius:12px; line-height:1; position:relative}
+  .notif-m:hover{filter:brightness(.96)}
   .bar-actions{display:none}
   /* ===== الديسكتوب: كويك أكسيس + ثيم ===== */
   @media(min-width:769px){
     .bar-actions{display:flex; gap:6px; align-items:center}
+    .notif-m{display:none}
     .drawer{width:360px} .dw-link{font-size:17px; padding:14px 16px}
   }
   .qa{display:flex; gap:2px; align-items:center}

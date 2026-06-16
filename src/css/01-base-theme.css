@@ -71,7 +71,7 @@
   @media(max-width:768px){
     .bar{position:relative}
     .mark{position:absolute; left:50%; transform:translateX(-50%); margin:0; gap:0}
-    .brandword, .mark small{display:none}
+    .mark small{display:none}
     .brandcal{display:inline-flex !important; margin:0}
     .brandcal svg{height:27px}
   }

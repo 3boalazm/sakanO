@@ -72,8 +72,9 @@
   // ---------- الإشعارات + الشات العائم ----------
   function applyBadges(){
     const u = S.updates || {count:0, chatUnread:0};
-    const nb = document.getElementById("ntfBadge");
-    if(nb){ if(u.count){ nb.hidden=false; nb.textContent = u.count>99?"99+":String(u.count); } else nb.hidden=true; }
+    [document.getElementById("ntfBadge"), document.getElementById("ntfBadgeM")].forEach(nb=>{
+      if(nb){ if(u.count){ nb.hidden=false; nb.textContent = u.count>99?"99+":String(u.count); } else nb.hidden=true; }
+    });
     const fb = document.getElementById("fabBadge");
     if(fb){ if(u.chatUnread){ fb.hidden=false; fb.textContent = u.chatUnread>99?"99+":String(u.chatUnread); } else fb.hidden=true; }
   }

@@ -31,7 +31,7 @@
           html += `<div class="cat-h"><span class="cat-ic">${c.ico}</span><div><div class="cat-t">${esc(c.title)}</div><div class="cat-s">${esc(c.theme)} — <b>${done}/${inCat.length}</b> خلّصناه معًا</div></div></div>`
             + inCat.map(r=>`<div class="card res" data-open="${esc(r.id)}">
                 <div style="display:flex;gap:12px;align-items:center;flex:1;min-width:0">
-                  <span style="font-size:22px;flex:none">${TYPE_ICON[r.type]||"📄"}</span>
+                  ${ r.thumbnail ? `<img src="${esc(r.thumbnail)}" alt="" loading="lazy" style="width:88px;height:52px;object-fit:cover;border-radius:9px;flex:none">` : `<span style="font-size:22px;flex:none">${TYPE_ICON[r.type]||"📄"}</span>` }
                   <div style="min-width:0"><h2 style="margin:0;font-size:17px">${ytMark(r)}${esc(r.title)}</h2>
                   <div class="meta">${r.speaker?esc(r.speaker)+" · ":""}${r.episodes?esc(r.episodes)+" حلقة":""}</div></div>
                 </div>

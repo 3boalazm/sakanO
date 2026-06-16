@@ -49,7 +49,7 @@
         const posTag = (pos)=> pos?`<span class="muted" style="flex:none;font-size:11.5px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:1px 7px" title="آخر نقطة توقّف">⏱ ${esc(pos)}</span>`:"";
         html += `<div class="card res" data-id="${esc(r.id)}" style="display:block">
           <div data-open="${esc(r.id)}" style="display:flex;gap:10px;align-items:center;min-width:0;cursor:pointer">
-            <span style="font-size:20px;flex:none">${TYPE_ICON[r.type]||"📄"}</span>
+            ${ r.thumbnail ? `<img src="${esc(r.thumbnail)}" alt="" loading="lazy" style="width:80px;height:48px;object-fit:cover;border-radius:9px;flex:none">` : `<span style="font-size:20px;flex:none">${TYPE_ICON[r.type]||"📄"}</span>` }
             <div style="min-width:0;flex:1"><h2 style="margin:0;font-size:16px">${ytMark(r)}${esc(r.title)}</h2>
               <div class="meta">${r.speaker?esc(r.speaker):""}</div></div>
             <span style="flex:none;color:var(--muted);font-size:18px;opacity:.55" aria-hidden="true">‹</span>

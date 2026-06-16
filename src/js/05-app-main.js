@@ -41,6 +41,8 @@
       if(act==="setProg"){ await api("PUT","/resources/"+S.resourceId+"/progress",{ status:node.dataset.val }); renderResource(); return; }
       if(act==="savePos"){ const v=(document.getElementById("posInput")||{}).value||""; await api("PUT","/resources/"+S.resourceId+"/position",{ position:v }); toast("اتسجّلت نقطة التوقّف ⏱"); renderResource(); return; }
       if(act==="clearPos"){ await api("PUT","/resources/"+S.resourceId+"/position",{ position:"" }); toast("اتمسحت نقطة التوقّف"); renderResource(); return; }
+      if(act==="sendResMsg"){ const ta=document.getElementById("rcInput"); const v=((ta&&ta.value)||"").trim(); if(!v) return; await api("POST","/resources/"+S.resourceId+"/chat",{ text:v }); if(ta){ ta.value=""; } _rcSig=""; loadResChat(); return; }
+      if(act==="delResMsg"){ await api("POST","/resources/"+S.resourceId+"/chat/"+node.dataset.id+"/delete"); _rcSig=""; loadResChat(); return; }
       if(act==="mutabaana"){ S.view="mutabaana"; render(); return; }
       if(act==="setProgId"){ await api("PUT","/resources/"+node.dataset.res+"/progress",{ status:node.dataset.val }); _mtbSig=""; loadMutabaana(); return; }
       if(act==="mtbFilter"){ S.mtbFilter=node.dataset.f; renderMutabaanaBody(_mtbItems); return; }
@@ -258,6 +260,16 @@
   });
 
   document.getElementById("foot").innerHTML = "سكن · مساحتنا إحنا الاتنين — خاصّة بطبيعتها، من غير مشاركة عامة.";
+
+  // نبضة الحضور: تحدّث آخر ظهوري وتجيب ظهور شريكي (كل ٢٥ث، وتقف لو التطبيق مخفي)
+  async function heartbeat(){
+    if(!S.token) return;
+    try{ S.presence = await api("POST","/presence",{}); renderPresence(); }catch(_){}
+  }
+  heartbeat();
+  setInterval(()=>{ if(document.visibilityState!=="hidden") heartbeat(); }, 25000);
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") heartbeat(); });
+
   render();
 })();
 

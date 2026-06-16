@@ -32,7 +32,7 @@
     name:  localStorage.getItem("sakan_name")  || null,
     email: localStorage.getItem("sakan_email") || null,
     view: _initView, resourceId: null, tab: "summary",
-    detail: null, responses: {},
+    detail: null, responses: {}, presence: null,
     pinEntry: "", pinStep: "lock",  // lock | setup1 | setup2 | whoselect
     pinWho: devWho(),               // "m"=مصطفى "d"=ضحى
     pinSetup1: "",                  // first entry in setup flow

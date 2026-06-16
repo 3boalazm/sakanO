@@ -6,9 +6,13 @@
   let _chatPartnerRead = 0; // آخر وقت قرأ فيه الشريك (لعلامات ✓✓)
   let _mtbSig  = "";     // توقيع آخر بيانات لمنع إعادة الرسم بلا داعٍ
   let _mtbItems = [];    // آخر مواد محمّلة (للفلترة بدون إعادة جلب)
+  let _rcPoll = null;    // دردشة المورد: مؤقّت التحديث الحيّ
+  let _rcSig  = "";      // توقيع آخر رسائل دردشة المورد
+  let _rcMsgs = [];      // آخر رسائل دردشة المورد المحمّلة
   function render(){
     if(_mtbPoll){ clearInterval(_mtbPoll); _mtbPoll=null; }   // أي تنقّل يوقف الـ polling
     if(_chatPoll){ clearInterval(_chatPoll); _chatPoll=null; }
+    if(_rcPoll){ clearInterval(_rcPoll); _rcPoll=null; }
     renderBar();
     document.body.classList.toggle("pre-auth", !S.token || S.view==="pinlock");
     if(S.view==="pinlock") return renderPinLock();
@@ -34,6 +38,12 @@
 
   // ---------- phase 2 + home: helpers ----------
   const OWN_AR = { m:"مصطفى", d:"ضحى", both:"الاتنين" };
+  // مين أنا ومين شريكي — حسب اسم الجلسة. يمنع لخبطة عرض تقدّم كل طرف على الشاشة التانية.
+  function coupleNames(){
+    const me = /ضحى|ضحي/.test(S.name||"") ? "ضحى" : (/مصطف/.test(S.name||"") ? "مصطفى" : (S.name||"أنا"));
+    const partner = me==="ضحى" ? "مصطفى" : (me==="مصطفى" ? "ضحى" : "شريكي");
+    return { me, partner };
+  }
   const fmtMoney = (n)=> (Number(n)||0).toLocaleString("ar-EG");
   function pageTitle(t, lede){ return `<h1 class="display">${esc(t)}</h1>${lede?`<p class="lede">${esc(lede)}</p>`:""}`; }
 
@@ -145,6 +155,7 @@
   }
   function renderMutabaanaBody(items){
     const body = document.getElementById("mtbBody"); if(!body) return;
+    const _cn = coupleNames();
     const pct = st => st==="completed"?100:(st==="in_progress"?50:0);
     const mineDone    = items.filter(r=>r.prog&&r.prog.mine==="completed").length;
     const partnerDone = items.filter(r=>r.prog&&r.prog.partner==="completed").length;
@@ -186,13 +197,13 @@
           </div>
           <div style="margin:10px 0 8px">
             <div style="display:flex;align-items:center;gap:8px;margin:4px 0">
-              <span class="muted" style="flex:none;width:48px;font-size:12px">مصطفى</span>
+              <span class="muted" style="flex:none;width:48px;font-size:12px">${esc(_cn.me)}</span>
               <span style="${barTrack}"><i style="display:block;height:100%;width:${mp}%;border-radius:99px;background:linear-gradient(90deg,var(--brand-mid,#1a5d47),var(--brand-deep,#0e3b2e));transition:width .35s"></i></span>
               <span class="muted" style="flex:none;width:34px;text-align:left;font-size:12px">${mp}%</span>
               ${posTag(p.minePos)}
             </div>
             <div style="display:flex;align-items:center;gap:8px;margin:4px 0">
-              <span class="muted" style="flex:none;width:48px;font-size:12px">ضحى</span>
+              <span class="muted" style="flex:none;width:48px;font-size:12px">${esc(_cn.partner)}</span>
               <span style="${barTrack}"><i style="display:block;height:100%;width:${pp}%;border-radius:99px;background:var(--brand-gold,#c9a14a);transition:width .35s"></i></span>
               <span class="muted" style="flex:none;width:34px;text-align:left;font-size:12px">${pp}%</span>
               ${posTag(p.partnerPos)}
@@ -213,7 +224,7 @@
   }
   function renderMutabaana(){
     S.view="mutabaana"; S.resourceId=null;
-    el.innerHTML = pageTitle("متابعتنا","شوف إنت وضحى وصلتوا لفين في كل مرحلة — والتحديثات بتظهر تلقائيًا كل شوية 🌿")
+    el.innerHTML = pageTitle("متابعتنا","شوف إنت و"+coupleNames().partner+" وصلتوا لفين في كل مرحلة — والتحديثات بتظهر تلقائيًا كل شوية 🌿")
       + `<div id="mtbBody"><div class="empty">…تحميل</div></div>`;
     _mtbSig = "";
     loadMutabaana();
@@ -292,6 +303,55 @@
     renderComposer();
     loadChat();
     _chatPoll = setInterval(()=>{ if(S.view!=="chat"){ clearInterval(_chatPoll); _chatPoll=null; return; } loadChat(); }, 4000);
+  }
+
+  // ---------- دردشة المورد: نقاش حرّ خاص بكل حلقة/فيديو ----------
+  function renderResChat(){
+    const t = document.getElementById("tab"); if(!t) return;
+    t.innerHTML = `<div class="card" style="padding:10px">
+        <div id="rcScroll" style="height:min(46vh,400px);overflow-y:auto;padding:4px 6px"><div class="empty">…تحميل</div></div>
+        <div style="display:flex;gap:8px;align-items:flex-end;margin-top:8px">
+          <textarea id="rcInput" placeholder="اكتب نقاشك حول الحلقة دي…" rows="1" style="flex:1;resize:none;min-height:44px;max-height:130px"></textarea>
+          <button class="btn accent" data-act="sendResMsg" style="flex:none">إرسال</button>
+        </div></div>`;
+    const ta = document.getElementById("rcInput");
+    if(ta){ ta.addEventListener("keydown",(e)=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); go("sendResMsg", ta); } }); }
+    _rcSig = "";
+    loadResChat();
+    if(_rcPoll) clearInterval(_rcPoll);
+    _rcPoll = setInterval(()=>{ if(S.view!=="resource" || S.tab!=="chat"){ clearInterval(_rcPoll); _rcPoll=null; return; } loadResChat(); }, 8000);
+  }
+  async function loadResChat(){
+    const rid = S.resourceId; if(!rid) return;
+    let res;
+    try{ res = await api("GET","/resources/"+rid+"/chat"); }
+    catch(e){ const b=document.getElementById("rcScroll"); if(b) b.innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`; return; }
+    const msgs = (res&&res.items)||[];
+    const sig = msgs.map(m=>`${m.id}:${m.deleted?1:0}`).join(",");
+    const box = document.getElementById("rcScroll"); if(!box) return;
+    if(sig===_rcSig && box.dataset.ready) return;
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 90;
+    _rcSig = sig; _rcMsgs = msgs;
+    renderResChatMsgs(msgs, atBottom);
+  }
+  function renderResChatMsgs(msgs, stick){
+    const box = document.getElementById("rcScroll"); if(!box) return;
+    if(!msgs.length){ box.innerHTML = `<div class="empty">لسه مفيش نقاش حول الحلقة دي — ابدأ إنت 🌿</div>`; box.dataset.ready="1"; return; }
+    const meBg = "linear-gradient(135deg,var(--brand-mid,#1a5d47),var(--brand-deep,#0e3b2e))";
+    let html="";
+    for(const m of msgs){
+      const mine = !!m.mine;
+      const hh = new Date(m.createdAt).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});
+      const bub = mine ? `background:${meBg};color:#fff;margin-inline-start:auto;border-end-end-radius:5px` : `background:var(--card-2,#f1ede1);color:var(--ink);margin-inline-end:auto;border-end-start-radius:5px`;
+      const body = m.deleted ? `<i style="opacity:.7">🚫 محذوفة</i>` : esc(m.text);
+      const del = (mine && !m.deleted) ? ` · <button class="linkbtn" data-act="delResMsg" data-id="${esc(m.id)}" style="font-size:10.5px;opacity:.75">حذف</button>` : "";
+      html += `<div style="display:flex;margin:4px 0"><div style="max-width:82%;padding:8px 12px;border-radius:16px;${bub};box-shadow:var(--shadow-sm,0 1px 3px rgba(0,0,0,.08))">
+        <div style="white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.55">${body}</div>
+        <div style="font-size:10.5px;opacity:.65;text-align:left;margin-top:3px">${hh}${del}</div>
+      </div></div>`;
+    }
+    box.innerHTML = html; box.dataset.ready="1";
+    if(stick) box.scrollTop = box.scrollHeight;
   }
 
   // ---------- بحث شامل في كل حاجة ----------
@@ -665,7 +725,7 @@
     const pinSet = !!localStorage.getItem(PIN_KEY);
     const whoName = devWho()==="m"?"مصطفى":devWho()==="d"?"ضحى":"";
     el.innerHTML = pageTitle("الإعدادات","الخصوصية أولًا. بياناتنا ملكنا.") + `
-      <div class="card"><div class="eyebrow">الميثاق</div><p class="muted" style="margin-top:-6px">كود ميثاقكم: <b>${esc(S.code||"—")}</b> — شاركه مع شريكك مرة واحدة فقط.</p></div>
+      <div class="card"><div class="eyebrow">الميثاق</div><p class="muted" style="margin-top:-6px">${S.code ? `كود ميثاقكم: <b>${esc(S.code)}</b> — شاركه مع شريكك مرة واحدة فقط (بيتمسح تلقائيًا بعد ما ينضم، لأمان مساحتكم).` : `تم الإقران ✓ — إنت وشريكك في نفس الميثاق. الكود اتمسح بعد الإقران عشان محدش تاني يقدر يستخدمه — ده مقصود مش عطل.`}</p></div>
 
       <div class="card">
         <div class="eyebrow">قفل الجهاز 🔐</div>
@@ -860,12 +920,14 @@
       <div class="tabs">
         <button class="tab ${S.tab==='summary'?'active':''}" data-tab="summary">الملخص</button>
         <button class="tab ${S.tab==='discussion'?'active':''}" data-tab="discussion">الحوار</button>
+        <button class="tab ${S.tab==='chat'?'active':''}" data-tab="chat">💬 دردشة</button>
         <button class="tab ${S.tab==='notes'?'active':''}" data-tab="notes">ملاحظات</button>
         <button class="tab ${S.tab==='decisions'?'active':''}" data-tab="decisions">القرارات</button>
       </div>
       <div id="tab"></div>`;
     if(S.tab==="summary") renderSummary();
     else if(S.tab==="discussion") renderDiscussion();
+    else if(S.tab==="chat") renderResChat();
     else if(S.tab==="notes") renderNotes();
     else renderDecisions();
   }

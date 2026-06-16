@@ -482,6 +482,8 @@
       UNAUTHENTICATED:"انتهت الجلسة، سجّل الدخول من جديد.",
       BAD_CREDENTIALS:"الإيميل أو الباسوورد غلط.",
       EMAIL_TAKEN:"الإيميل ده مستخدم بالفعل — جرّب تسجيل الدخول.",
+      ONLY_CREATOR:"إعادة توليد الكود متاحة لمنشئ الميثاق بس (اللي بدأ المساحة).",
+      BAD_BACKUP:"ملف النسخة مش صالح أو تالف.",
       BAD_EMAIL:"اكتب إيميل صحيح.",
       WEAK_PASSWORD:"الباسوورد لازم ٤ حروف على الأقل.",
     };
@@ -1319,7 +1321,9 @@
     const pinSet = !!localStorage.getItem(PIN_KEY);
     const whoName = devWho()==="m"?"مصطفى":devWho()==="d"?"ضحى":"";
     el.innerHTML = pageTitle("الإعدادات","الخصوصية أولًا. بياناتنا ملكنا.") + `
-      <div class="card"><div class="eyebrow">الميثاق</div><p class="muted" style="margin-top:-6px">${S.code ? `كود ميثاقكم: <b>${esc(S.code)}</b> — شاركه مع شريكك مرة واحدة فقط (بيتمسح تلقائيًا بعد ما ينضم، لأمان مساحتكم).` : `تم الإقران ✓ — إنت وشريكك في نفس الميثاق. الكود اتمسح بعد الإقران عشان محدش تاني يقدر يستخدمه — ده مقصود مش عطل.`}</p></div>
+      <div class="card"><div class="eyebrow">الميثاق</div><p class="muted" style="margin-top:-6px">${S.code ? `كود ميثاقكم: <b>${esc(S.code)}</b> — شاركه مع شريكك مرة واحدة فقط (بيتمسح تلقائيًا بعد ما ينضم، لأمان مساحتكم).` : `تم الإقران ✓ — إنت وشريكك في نفس الميثاق. الكود اتمسح بعد الإقران عشان محدش تاني يقدر يستخدمه — ده مقصود مش عطل.`}</p>
+        <div class="actions" style="margin-top:6px"><span class="spacer"></span><button class="btn ghost sm" data-act="regenCode" style="width:auto;color:#c0392b">🔄 إعادة توليد كود الإقران (طوارئ)</button></div>
+        <p class="muted" style="font-size:11.5px;margin:6px 0 0;opacity:.8">⚠️ بيفصل شريكك الحالي ويلغي وصوله، وهيحتاج ينضم من جديد بالكود الجديد. استخدمها بس لو حصلت مشكلة في الإقران.</p></div>
 
       <div class="card">
         <div class="eyebrow">قفل الجهاز 🔐</div>
@@ -1332,10 +1336,29 @@
         </div>
       </div>
 
-      <div class="card"><div class="eyebrow">بياناتك</div><h2>تصدير كل البيانات</h2>
-        <p class="muted" style="margin-top:-6px">المكتبة، القرارات، المهام، الميزانية، والمشتريات في ملف JSON واحد.</p>
-        <button class="btn" data-act="export">تصدير (JSON)</button></div>
+      <div class="card"><div class="eyebrow">النسخ الاحتياطي والاسترجاع</div><h2>بياناتنا ملكنا</h2>
+        <p class="muted" style="margin-top:-6px">نزّل نسخة كاملة من كل بيانات الميثاق (المكتبة، التقدّم، النقاشات، القرارات، الملاحظات، المهام، الميزانية…) في ملف واحد. احتفظ بيها في مكان آمن — بتنفع لو حصل أي عطل أو لو فتحت حساب جديد.</p>
+        <div class="actions" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+          <button class="btn" data-act="doBackup">⬇️ نسخة احتياطية كاملة (JSON)</button>
+          <button class="btn ghost" data-act="doRestore">⬆️ استرجاع من نسخة</button>
+        </div>
+        <input type="file" id="restoreFile" accept="application/json,.json" style="display:none">
+        <p class="muted" style="font-size:11.5px;margin:8px 0 0;opacity:.85">💡 للاسترجاع الكامل في حساب جديد: اعمل الحساب، خلّي شريكك ينضم بالكود الأول، وبعدين استرجع — عشان تقدّم كل واحد يرجع له صح.</p></div>
       <div class="card"><div class="eyebrow">الحساب</div><div class="actions"><button class="btn ghost" data-act="logout">تسجيل الخروج</button></div></div>`;
+    const _rf = document.getElementById("restoreFile");
+    if(_rf) _rf.addEventListener("change", onRestoreFile);
+  }
+  async function onRestoreFile(ev){
+    const file = ev.target.files && ev.target.files[0]; if(!file) return;
+    let backup;
+    try{ backup = JSON.parse(await file.text()); }
+    catch(_){ toast("الملف مش صالح (JSON غلط)"); ev.target.value=""; return; }
+    if(!backup || backup.app!=="sakan"){ toast("ده مش ملف نسخة بتاعة سكن"); ev.target.value=""; return; }
+    const when = backup.exportedAt ? new Date(backup.exportedAt).toLocaleString("ar-EG") : "غير معروف";
+    if(!confirm("استرجاع نسخة سكن:\n\n• تاريخ النسخة: "+when+"\n• هتكتب بيانات النسخة فوق الحالية (المعرّفات المتطابقة بتتحدّث).\n• الأفضل تعمله على حساب جديد فاضي.\n\nتكمّل؟")){ ev.target.value=""; return; }
+    try{ toast("جاري الاسترجاع…"); const out = await api("POST","/restore",{ backup }); toast("تم الاسترجاع ✓ ("+(out.restored||0)+" عنصر)"); }
+    catch(e){ toast(errMsg(e)); ev.target.value=""; return; }
+    ev.target.value=""; S.view="home"; render();
   }
 
   function authField(ico, id, type, ph, val, eye){
@@ -1922,6 +1945,10 @@
       if(act==="clearPos"){ await api("PUT","/resources/"+S.resourceId+"/position",{ position:"" }); toast("اتمسحت نقطة التوقّف"); renderResource(); return; }
       if(act==="sendResMsg"){ const ta=document.getElementById("rcInput"); const v=((ta&&ta.value)||"").trim(); if(!v) return; await api("POST","/resources/"+S.resourceId+"/chat",{ text:v }); if(ta){ ta.value=""; } _rcSig=""; loadResChat(); return; }
       if(act==="delResMsg"){ await api("POST","/resources/"+S.resourceId+"/chat/"+node.dataset.id+"/delete"); _rcSig=""; loadResChat(); return; }
+      if(act==="regenCode"){
+        if(!confirm("إعادة توليد كود الإقران:\n\n• هتفصل شريكك الحالي وتلغي وصوله (جلساته وحسابه القديم).\n• هيحتاج ينضم من جديد بالكود الجديد.\n• الكود لمرّة واحدة وبيتمسح بعد ما ينضم.\n\nمتأكد إنك عايز تكمّل؟")) return;
+        const out=await api("POST","/pair/regenerate",{}); S.code=out.pairCode; save(); toast("اتولّد كود إقران جديد — شاركه مع شريكك للانضمام"); render(); return;
+      }
       if(act==="mutabaana"){ S.view="mutabaana"; render(); return; }
       if(act==="setProgId"){ await api("PUT","/resources/"+node.dataset.res+"/progress",{ status:node.dataset.val }); _mtbSig=""; loadMutabaana(); return; }
       if(act==="mtbFilter"){ S.mtbFilter=node.dataset.f; renderMutabaanaBody(_mtbItems); return; }
@@ -2103,15 +2130,18 @@
       if(act==="delShop"){ await api("POST","/shopping/"+node.dataset.id+"/delete"); reloadShopping(); return; }
 
       // ---- settings: export ----
-      if(act==="export"){
-        toast("جاري التصدير…");
-        const out={ exportedAt:new Date().toISOString() };
-        const grab=async(k,path)=>{ try{ out[k]=await api("GET",path); }catch(e){ out[k]=[]; } };
-        await Promise.all([grab("resources","/resources"),grab("decisions","/decisions"),grab("tasks","/tasks"),grab("budget","/budget"),grab("shopping","/shopping")]);
-        const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
-        const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download="sakan-export.json"; link.click(); URL.revokeObjectURL(link.href);
-        toast("تم التصدير"); return;
+      if(act==="doBackup"){
+        try{
+          toast("جاري التحضير…");
+          const out = await api("GET","/backup");
+          const blob = new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
+          const link = document.createElement("a"); link.href=URL.createObjectURL(blob);
+          link.download = "sakan-backup-"+new Date().toISOString().slice(0,10)+".json"; link.click();
+          URL.revokeObjectURL(link.href); toast("اتنزّلت النسخة الاحتياطية ✓");
+        }catch(e){ toast(errMsg(e)); }
+        return;
       }
+      if(act==="doRestore"){ const rf=document.getElementById("restoreFile"); if(rf) rf.click(); return; }
     }catch(e){
       if(e.code==="UNAUTHENTICATED"){ toast(errMsg(e)); return logout(); }
       toast(errMsg(e));

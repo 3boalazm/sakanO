@@ -43,6 +43,10 @@
       if(act==="clearPos"){ await api("PUT","/resources/"+S.resourceId+"/position",{ position:"" }); toast("اتمسحت نقطة التوقّف"); renderResource(); return; }
       if(act==="sendResMsg"){ const ta=document.getElementById("rcInput"); const v=((ta&&ta.value)||"").trim(); if(!v) return; await api("POST","/resources/"+S.resourceId+"/chat",{ text:v }); if(ta){ ta.value=""; } _rcSig=""; loadResChat(); return; }
       if(act==="delResMsg"){ await api("POST","/resources/"+S.resourceId+"/chat/"+node.dataset.id+"/delete"); _rcSig=""; loadResChat(); return; }
+      if(act==="regenCode"){
+        if(!confirm("إعادة توليد كود الإقران:\n\n• هتفصل شريكك الحالي وتلغي وصوله (جلساته وحسابه القديم).\n• هيحتاج ينضم من جديد بالكود الجديد.\n• الكود لمرّة واحدة وبيتمسح بعد ما ينضم.\n\nمتأكد إنك عايز تكمّل؟")) return;
+        const out=await api("POST","/pair/regenerate",{}); S.code=out.pairCode; save(); toast("اتولّد كود إقران جديد — شاركه مع شريكك للانضمام"); render(); return;
+      }
       if(act==="mutabaana"){ S.view="mutabaana"; render(); return; }
       if(act==="setProgId"){ await api("PUT","/resources/"+node.dataset.res+"/progress",{ status:node.dataset.val }); _mtbSig=""; loadMutabaana(); return; }
       if(act==="mtbFilter"){ S.mtbFilter=node.dataset.f; renderMutabaanaBody(_mtbItems); return; }
@@ -224,15 +228,18 @@
       if(act==="delShop"){ await api("POST","/shopping/"+node.dataset.id+"/delete"); reloadShopping(); return; }
 
       // ---- settings: export ----
-      if(act==="export"){
-        toast("جاري التصدير…");
-        const out={ exportedAt:new Date().toISOString() };
-        const grab=async(k,path)=>{ try{ out[k]=await api("GET",path); }catch(e){ out[k]=[]; } };
-        await Promise.all([grab("resources","/resources"),grab("decisions","/decisions"),grab("tasks","/tasks"),grab("budget","/budget"),grab("shopping","/shopping")]);
-        const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
-        const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download="sakan-export.json"; link.click(); URL.revokeObjectURL(link.href);
-        toast("تم التصدير"); return;
+      if(act==="doBackup"){
+        try{
+          toast("جاري التحضير…");
+          const out = await api("GET","/backup");
+          const blob = new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
+          const link = document.createElement("a"); link.href=URL.createObjectURL(blob);
+          link.download = "sakan-backup-"+new Date().toISOString().slice(0,10)+".json"; link.click();
+          URL.revokeObjectURL(link.href); toast("اتنزّلت النسخة الاحتياطية ✓");
+        }catch(e){ toast(errMsg(e)); }
+        return;
       }
+      if(act==="doRestore"){ const rf=document.getElementById("restoreFile"); if(rf) rf.click(); return; }
     }catch(e){
       if(e.code==="UNAUTHENTICATED"){ toast(errMsg(e)); return logout(); }
       toast(errMsg(e));

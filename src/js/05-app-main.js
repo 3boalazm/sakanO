@@ -166,9 +166,7 @@
       if(act==="delWish"){ await api("POST","/wishes/"+node.dataset.id+"/delete"); renderConnect(); return; }
       if(act==="addGrat"){ const t=(document.getElementById("gText").value||"").trim(); if(!t) return toast("اكتب امتنانك"); await api("POST","/gratitude",{text:t}); renderConnect(); return; }
       if(act==="delGrat"){ await api("POST","/gratitude/"+node.dataset.id+"/delete"); renderConnect(); return; }
-      if(act==="capMode"){ const wrap=document.getElementById("capMode"); if(wrap)[...wrap.children].forEach(x=>x.classList.toggle("on",x===node)); const dw=document.getElementById("capDateWrap"); if(dw) dw.style.display = node.dataset.mode==="manual"?"none":""; return; }
-      if(act==="addCapsule"){ const c=(document.getElementById("capContent").value||"").trim(); if(!c) return toast("اكتب رسالتك"); const manual=!!(document.querySelector("#capMode button.on")||{}).dataset && (document.querySelector("#capMode button.on")||{}).dataset.mode==="manual"; const d=(document.getElementById("capDate").value||"").trim(); await api("POST","/capsules",{content:c,openDate:manual?null:(d||null),manualSeal:manual}); toast("خُتمت الرسالة"); renderConnect(); return; }
-      if(act==="openCapsule"){ await api("POST","/capsules/"+node.dataset.id+"/open"); toast("اتبعتت لشريكك 💌"); renderConnect(); return; }
+      if(act==="addCapsule"){ const c=(document.getElementById("capContent").value||"").trim(); if(!c) return toast("اكتب رسالتك"); const d=(document.getElementById("capDate").value||"").trim(); await api("POST","/capsules",{content:c,openDate:d||null}); toast("خُتمت الرسالة"); renderConnect(); return; }
       if(act==="addSafe"){ const topic=(document.getElementById("safeTopic").value||"").trim(); if(!topic) return toast("اكتب الموضوع"); await api("POST","/safespace",{topic,feeling:(document.getElementById("safeFeel").value||"").trim(),need:(document.getElementById("safeNeed").value||"").trim()}); toast("أُضيف للصندوق"); renderConnect(); return; }
       if(act==="safeAddressed"){ await api("POST","/safespace/"+node.dataset.id+"/addressed"); renderConnect(); return; }
       if(act==="seedCurriculum"){ const r=await api("POST","/journey/seed"); toast(r.already? "المنهج مستورد بالفعل" : "تم استيراد "+r.seeded+" موردًا"); renderJourneys(); return; }
@@ -206,19 +204,13 @@
 
       // ---- tasks ----
       if(act==="addTask"){
-        const title=(document.getElementById("tTitle").value||"").trim(); if(!title) return toast("اكتب اسم المهمة");
-        const details=(document.getElementById("tDetails").value||"").trim();
+        const title=(document.getElementById("tTitle").value||"").trim(); if(!title) return toast("اكتب المهمة");
         const owner=(document.querySelector("#tOwner button.on")||{}).dataset?.own || "both";
         const due=(document.getElementById("tDue").value||"").trim();
-        const mode=(document.querySelector("#tMode button.on")||{}).dataset?.mode || "simple";
-        const steps = mode==="steps" ? (document.getElementById("tSteps").value||"").split("\n").map(x=>x.trim()).filter(Boolean) : [];
-        await api("POST","/tasks",{title,details:details||null,owner,due:due||null,steps}); toast("أُضيفت المهمة"); renderTasks(); return;
+        await api("POST","/tasks",{title,owner,due:due||null}); toast("أُضيفت المهمة"); renderTasks(); return;
       }
       if(act==="toggleTask"){ await api("POST","/tasks/"+node.dataset.id+"/toggle"); reloadTasks(); return; }
       if(act==="delTask"){ await api("POST","/tasks/"+node.dataset.id+"/delete"); reloadTasks(); return; }
-      if(act==="toggleStep"){ await api("POST","/tasks/"+node.dataset.id+"/steps/"+node.dataset.step+"/toggle"); reloadTasks(); return; }
-      if(act==="delStep"){ await api("POST","/tasks/"+node.dataset.id+"/steps/"+node.dataset.step+"/delete"); reloadTasks(); return; }
-      if(act==="addStep"){ const inp=document.getElementById("ns-"+node.dataset.id); const t=(inp&&inp.value||"").trim(); if(!t) return toast("اكتب المرحلة"); await api("POST","/tasks/"+node.dataset.id+"/steps",{text:t}); reloadTasks(); return; }
 
       // ---- budget ----
       if(act==="addBudget"){
@@ -285,16 +277,6 @@
     const cat = ev.target.closest("[data-cat]");
     if(cat){ [...cat.parentElement.children].forEach(x=>x.classList.toggle("on", x===cat)); return; }
   });
-
-  // مَخرج إضافي: زر Escape يقفل الشات العائم أو لوحة الإشعارات لو مفتوحة
-  document.addEventListener("keydown",(ev)=>{
-    if(ev.key!=="Escape") return;
-    if(S.fabOpen){ closeFab(); return; }
-    const np=document.getElementById("ntfPanel"); if(np && !np.hidden){ closeNotif(); }
-  });
-
-  // زر الرجوع (back) أو جيتشر الرجوع يقفل الشات العائم بدل ما يطلّع من التطبيق
-  window.addEventListener("popstate",()=>{ if(S.fabOpen) closeFab(true); });
 
   document.getElementById("foot").innerHTML = "سكن · مساحتنا إحنا الاتنين — خاصّة بطبيعتها، من غير مشاركة عامة.";
 

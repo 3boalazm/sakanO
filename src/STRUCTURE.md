@@ -34,12 +34,20 @@ sakanO-main/
 │   │   ├── _js_order.json      ترتيب دمج الأجزاء (مصدر الحقيقة للترتيب)
 │   │   ├── 01-config-state.js  الإعداد + كائن الحالة S + قفل الـ PIN
 │   │   ├── 02-helpers-api.js   esc · toast · api() · errMsg · save · logout
-│   │   ├── 03-ui-shell.js      الدرج (renderDrawer) + الهيدر (renderBar) + الثيم
-│   │   ├── 04-views.js         render() + كل الواجهات (ومنها renderMutabaana)
+│   │   ├── 03-ui-shell.js      الدرج (renderDrawer) + الهيدر (renderBar) + الثيم + الشات العائم
+│   │   ├── views/              ← كل صفحة من المنيو في ملف خاص بيها (أجزاء من نفس الـ IIFE)
+│   │   │   ├── 01-core.js         الحالة المشتركة + موجّه render() + مساعدات عامة
+│   │   │   ├── 02-journeys.js     قوائمنا   · 03-mutabaana.js متابعتنا
+│   │   │   ├── 04-chat.js         شاتنا     · 05-resource-chat.js نقاش المورد
+│   │   │   ├── 06-search.js       البحث     · 07-pinlock.js قفل الـ PIN
+│   │   │   ├── 08-quicknotes.js   مفكّرتنا   · 09-home.js الرئيسية
+│   │   │   ├── 10-tasks.js        المهام    · 11-budget.js الميزانية · 12-shopping.js المشتريات
+│   │   │   ├── 13-settings.js     الإعدادات · 14-onboarding.js الدخول/الإنشاء
+│   │   │   ├── 15-library.js      المكتبة + تفاصيل المورد · 16-decisions.js قرارات المورد
+│   │   │   ├── 17-myjourney.js    رحلتي     · 18-discussions.js كل المناقشات
+│   │   │   └── 19-decisionlog.js  سجلّ القرارات · 20-connect-charter.js تواصلنا + ميثاقنا
 │   │   ├── 05-app-main.js      go() + مستمع الأحداث + الإقلاع (يغلق الـ IIFE)
-│   │   ├── pwa.js             تسجيل service-worker + نافذة التثبيت
-│   │   └── (legacy) sakan-core.js · sakan-pages1.js · sakan-pages2.js
-│   │                          مصدر ما‑قبل‑الدمج (يرجع له الـ sw.js بالكاش فقط)
+│   │   └── pwa.js             تسجيل service-worker + نافذة التثبيت
 │   ├── manifest.json · sw.js · icons/ · media/
 │
 ├── build.mjs                 ← أداة البناء

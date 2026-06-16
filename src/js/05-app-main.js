@@ -166,7 +166,9 @@
       if(act==="delWish"){ await api("POST","/wishes/"+node.dataset.id+"/delete"); renderConnect(); return; }
       if(act==="addGrat"){ const t=(document.getElementById("gText").value||"").trim(); if(!t) return toast("اكتب امتنانك"); await api("POST","/gratitude",{text:t}); renderConnect(); return; }
       if(act==="delGrat"){ await api("POST","/gratitude/"+node.dataset.id+"/delete"); renderConnect(); return; }
-      if(act==="addCapsule"){ const c=(document.getElementById("capContent").value||"").trim(); if(!c) return toast("اكتب رسالتك"); const d=(document.getElementById("capDate").value||"").trim(); await api("POST","/capsules",{content:c,openDate:d||null}); toast("خُتمت الرسالة"); renderConnect(); return; }
+      if(act==="capMode"){ const wrap=document.getElementById("capMode"); if(wrap)[...wrap.children].forEach(x=>x.classList.toggle("on",x===node)); const dw=document.getElementById("capDateWrap"); if(dw) dw.style.display = node.dataset.mode==="manual"?"none":""; return; }
+      if(act==="addCapsule"){ const c=(document.getElementById("capContent").value||"").trim(); if(!c) return toast("اكتب رسالتك"); const manual=!!(document.querySelector("#capMode button.on")||{}).dataset && (document.querySelector("#capMode button.on")||{}).dataset.mode==="manual"; const d=(document.getElementById("capDate").value||"").trim(); await api("POST","/capsules",{content:c,openDate:manual?null:(d||null),manualSeal:manual}); toast("خُتمت الرسالة"); renderConnect(); return; }
+      if(act==="openCapsule"){ await api("POST","/capsules/"+node.dataset.id+"/open"); toast("اتبعتت لشريكك 💌"); renderConnect(); return; }
       if(act==="addSafe"){ const topic=(document.getElementById("safeTopic").value||"").trim(); if(!topic) return toast("اكتب الموضوع"); await api("POST","/safespace",{topic,feeling:(document.getElementById("safeFeel").value||"").trim(),need:(document.getElementById("safeNeed").value||"").trim()}); toast("أُضيف للصندوق"); renderConnect(); return; }
       if(act==="safeAddressed"){ await api("POST","/safespace/"+node.dataset.id+"/addressed"); renderConnect(); return; }
       if(act==="seedCurriculum"){ const r=await api("POST","/journey/seed"); toast(r.already? "المنهج مستورد بالفعل" : "تم استيراد "+r.seeded+" موردًا"); renderJourneys(); return; }
@@ -204,13 +206,19 @@
 
       // ---- tasks ----
       if(act==="addTask"){
-        const title=(document.getElementById("tTitle").value||"").trim(); if(!title) return toast("اكتب المهمة");
+        const title=(document.getElementById("tTitle").value||"").trim(); if(!title) return toast("اكتب اسم المهمة");
+        const details=(document.getElementById("tDetails").value||"").trim();
         const owner=(document.querySelector("#tOwner button.on")||{}).dataset?.own || "both";
         const due=(document.getElementById("tDue").value||"").trim();
-        await api("POST","/tasks",{title,owner,due:due||null}); toast("أُضيفت المهمة"); renderTasks(); return;
+        const mode=(document.querySelector("#tMode button.on")||{}).dataset?.mode || "simple";
+        const steps = mode==="steps" ? (document.getElementById("tSteps").value||"").split("\n").map(x=>x.trim()).filter(Boolean) : [];
+        await api("POST","/tasks",{title,details:details||null,owner,due:due||null,steps}); toast("أُضيفت المهمة"); renderTasks(); return;
       }
       if(act==="toggleTask"){ await api("POST","/tasks/"+node.dataset.id+"/toggle"); reloadTasks(); return; }
       if(act==="delTask"){ await api("POST","/tasks/"+node.dataset.id+"/delete"); reloadTasks(); return; }
+      if(act==="toggleStep"){ await api("POST","/tasks/"+node.dataset.id+"/steps/"+node.dataset.step+"/toggle"); reloadTasks(); return; }
+      if(act==="delStep"){ await api("POST","/tasks/"+node.dataset.id+"/steps/"+node.dataset.step+"/delete"); reloadTasks(); return; }
+      if(act==="addStep"){ const inp=document.getElementById("ns-"+node.dataset.id); const t=(inp&&inp.value||"").trim(); if(!t) return toast("اكتب المرحلة"); await api("POST","/tasks/"+node.dataset.id+"/steps",{text:t}); reloadTasks(); return; }
 
       // ---- budget ----
       if(act==="addBudget"){
@@ -240,6 +248,18 @@
         return;
       }
       if(act==="doRestore"){ const rf=document.getElementById("restoreFile"); if(rf) rf.click(); return; }
+      if(act==="toggleNotif"){ const p=document.getElementById("ntfPanel"); if(p && !p.hidden) closeNotif(); else openNotif(); return; }
+      if(act==="closeNotif"){ closeNotif(); return; }
+      if(act==="toggleFab"){ if(S.fabOpen) closeFab(); else openFab(); return; }
+      if(act==="closeFab"){ closeFab(); return; }
+      if(act==="notifGo"){
+        const target=node.dataset.target, res=node.dataset.res||"";
+        closeNotif();
+        if(target==="chat"){ openFab(); return; }
+        if(target==="resChat" && res){ S.resourceId=res; S.view="resource"; S.tab="chat"; render(); return; }
+        if(res){ S.resourceId=res; S.view="resource"; S.tab="summary"; render(); return; }
+        return go(target||"home");
+      }
     }catch(e){
       if(e.code==="UNAUTHENTICATED"){ toast(errMsg(e)); return logout(); }
       toast(errMsg(e));
@@ -266,16 +286,44 @@
     if(cat){ [...cat.parentElement.children].forEach(x=>x.classList.toggle("on", x===cat)); return; }
   });
 
+  // مَخرج إضافي: زر Escape يقفل الشات العائم أو لوحة الإشعارات لو مفتوحة
+  document.addEventListener("keydown",(ev)=>{
+    if(ev.key!=="Escape") return;
+    if(S.fabOpen){ closeFab(); return; }
+    const np=document.getElementById("ntfPanel"); if(np && !np.hidden){ closeNotif(); }
+  });
+
+  // زر الرجوع (back) أو جيتشر الرجوع يقفل الشات العائم بدل ما يطلّع من التطبيق
+  window.addEventListener("popstate",()=>{ if(S.fabOpen) closeFab(true); });
+
   document.getElementById("foot").innerHTML = "سكن · مساحتنا إحنا الاتنين — خاصّة بطبيعتها، من غير مشاركة عامة.";
 
-  // نبضة الحضور: تحدّث آخر ظهوري وتجيب ظهور شريكي (كل ٢٥ث، وتقف لو التطبيق مخفي)
-  async function heartbeat(){
-    if(!S.token) return;
-    try{ S.presence = await api("POST","/presence",{}); renderPresence(); }catch(_){}
+  // نبضة موحّدة: تحدّث حضوري، تجيب حضور شريكي + الإشعارات، تحدّث الشارات، وتشغّل صوت لو في رسالة جديدة
+  let _audioCtx = null;
+  function playBlip(){
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+      _audioCtx = _audioCtx || new AC();
+      if(_audioCtx.state==="suspended") _audioCtx.resume();
+      const now=_audioCtx.currentTime;
+      const beep=(f,t0,dur,vol)=>{ const o=_audioCtx.createOscillator(), g=_audioCtx.createGain(); o.type="sine"; o.frequency.value=f; g.gain.setValueAtTime(0.0001,now+t0); g.gain.exponentialRampToValueAtTime(vol,now+t0+0.02); g.gain.exponentialRampToValueAtTime(0.0001,now+t0+dur); o.connect(g); g.connect(_audioCtx.destination); o.start(now+t0); o.stop(now+t0+dur+0.02); };
+      beep(660,0,0.32,0.16); beep(880,0.13,0.34,0.13);
+    }catch(_){}
   }
-  heartbeat();
-  setInterval(()=>{ if(document.visibilityState!=="hidden") heartbeat(); }, 25000);
-  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") heartbeat(); });
+  async function tick(){
+    if(!S.token) return;
+    try{ S.presence = await api("POST","/presence",{}); }catch(_){}
+    try{
+      const u = await api("GET","/updates");
+      const prev = (S._prevChat==null) ? null : S._prevChat;
+      S.updates = u; S._prevChat = u.chatUnread||0;
+      if(prev!=null && (u.chatUnread||0) > prev && !S.fabOpen && S.view!=="chat") playBlip();
+    }catch(_){}
+    renderPresence(); renderChatPresence(); if(S.fabOpen) renderFab(); applyBadges();
+  }
+  tick();
+  setInterval(()=>{ if(document.visibilityState!=="hidden") tick(); }, 15000);
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") tick(); });
 
   render();
 })();

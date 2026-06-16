@@ -1,142 +1,3 @@
-
-  async function renderDiscussionsAll(){
-    S.view="discussions"; S.resourceId=null;
-    el.innerHTML = pageTitle("المناقشات","كل الأسئلة من موادنا في مكان واحد.") + `<div id="dscBody"><div class="empty">…تحميل</div></div>`;
-    try{
-      const [qs, res] = await Promise.all([api("GET","/questions"), api("GET","/resources")]);
-      const titles = Object.fromEntries(res.map(r=>[r.id, r.title]));
-      const body=document.getElementById("dscBody");
-      if(!qs.length){ body.innerHTML=`<div class="empty">لسه مفيش أسئلة. افتح موردًا وولّد منه أسئلة نقاش.</div>`; return; }
-      const byRes={}; qs.forEach(q=>{ (byRes[q.resourceId]=byRes[q.resourceId]||[]).push(q); });
-      body.innerHTML = Object.keys(byRes).map(rid=>`<div class="eyebrow" style="margin-top:20px">${esc(titles[rid]||"مورد")}</div>`
-        + byRes[rid].map(q=>`<div class="card res" data-openq="${esc(rid)}">
-            <div style="flex:1;min-width:0"><p style="margin:0">${esc(q.text)}</p></div>
-            <span class="pill dot ${['revealed','decided'].includes(q.state)?'':'warn'}" style="flex:none">${STATE_AR[q.state]||esc(q.state)}</span>
-          </div>`).join("")).join("");
-    }catch(e){ document.getElementById("dscBody").innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`; }
-  }
-
-  async function renderDecisionLog(){
-    S.view="decisionlog"; S.resourceId=null;
-    el.innerHTML = pageTitle("سجل القرارات","كل ما اتفقنا عليه — مرتّب ودائم.") + `<div id="decBody"><div class="empty">…تحميل</div></div>`;
-    try{
-      const decs = await api("GET","/decisions");
-      document.getElementById("decBody").innerHTML = decs.length ? decs.map(d=> decCard(d,{inResource:false})).join("")
-        : `<div class="empty">لا قرارات بعد. كل حوار تكملوه يتحوّل لقرار من تبويب القرارات داخل المورد.</div>`;
-    }catch(e){ document.getElementById("decBody").innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`; }
-  }
-
-  // ---------- phase 5: التواصل ----------
-  const MOOD_OPT = [["great","😍 رائعة"],["good","🙂 جيدة"],["ok","😐 عادية"],["low","😟 متعبة"]];
-  const moodLabel = (v)=> (MOOD_OPT.find(m=>m[0]===v)||["","—"])[1];
-  async function renderCharter(){
-    S.view="charter"; S.resourceId=null;
-    el.innerHTML = pageTitle("ميثاقنا","اتفاقاتنا الثابتة اللي نرجعلها وقت الحاجة — من قلبنا ومن منهجنا.") + `<div id="chBody"><div class="empty">…تحميل</div></div>`;
-    try{
-      const items = await api("GET","/charter");
-      const by = k => items.filter(x=>x.kind===k);
-      const calm = by("calmword")[0];
-      const listBlock = (k, ph) => {
-        const arr = by(k);
-        return `<div class="row" style="margin-top:4px"><input id="ch_${k}" type="text" placeholder="${ph}"></div>
-          <div class="actions"><span class="spacer"></span><button class="btn sm" data-act="addCharter" data-kind="${k}">أضِف</button></div>
-          ${arr.length? arr.map(it=>`<div class="actions" style="justify-content:space-between;padding:7px 0;border-top:1px solid var(--line)">
-            <span style="flex:1">• ${esc(it.text)}</span><button class="linkbtn" data-act="delCharter" data-id="${esc(it.id)}">حذف</button></div>`).join("")
-            : `<p class="muted" style="font-size:13px">لسه فاضي.</p>`}`;
-      };
-      document.getElementById("chBody").innerHTML = `
-        <div class="card"><div class="eyebrow">كلمة التهدئة</div>
-          <p class="muted" style="margin-top:-6px;font-size:13px">كلمة سرّ بسيطة نقولها أول ما النبرة تبدأ تحتدّ — إشارة نوقف عندها فورًا.</p>
-          ${calm? `<div class="codebox" style="font-size:20px;letter-spacing:1px">${esc(calm.text)}</div>
-            <div class="actions" style="margin-top:8px"><span class="spacer"></span><button class="linkbtn" data-act="delCharter" data-id="${esc(calm.id)}">تغيير/حذف</button></div>`
-          : `<div class="row" style="margin-top:4px"><input id="ch_calmword" type="text" placeholder="مثلًا: القمر 🌙"></div>
-            <div class="actions"><span class="spacer"></span><button class="btn sm" data-act="addCharter" data-kind="calmword">احفظ الكلمة</button></div>`}</div>
-
-        <div class="card"><div class="eyebrow">ميثاق التغافل</div>
-          <p class="muted" style="margin-top:-6px;font-size:13px">الحاجات الصغيرة اللي اتفقنا نعدّي عنها ومنوقفش عندها (الـ20%).</p>
-          ${listBlock("tagaful","حاجة نتغافل عنها…")}</div>
-
-        <div class="card"><div class="eyebrow">قواعدنا وقت الخلاف</div>
-          <p class="muted" style="margin-top:-6px;font-size:13px">قواعد نلتزم بيها وقت ما نختلف — زي قاعدة الـ24 ساعة، مفيش صمت عقابي، مننامش غاضبين.</p>
-          ${listBlock("conflict","قاعدة نلتزم بيها…")}</div>
-
-        <div class="card"><div class="eyebrow">نيّاتنا</div>
-          <p class="muted" style="margin-top:-6px;font-size:13px">ليه احنا هنا — النيّات اللي بنعقد عليها بيتنا.</p>
-          ${listBlock("niyyah","نيّة من نيّاتنا…")}</div>`;
-    }catch(e){ document.getElementById("chBody").innerHTML = `<div class="empty">${esc(errMsg(e))}</div>`; }
-  }
-
-  function keyCol(arr, mine){
-    if(!arr.length) return `<p class="muted" style="font-size:12.5px">—</p>`;
-    return arr.map(k=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--line)">
-      <span style="font-size:13.5px">${k.kind==='soothe'?'🌿':'⚠️'} ${esc(k.text)}</span>
-      ${mine?`<button class="linkbtn" data-act="delKey" data-id="${esc(k.id)}">حذف</button>`:""}</div>`).join("");
-  }
-
-  async function renderConnect(){
-    S.view="connect"; S.resourceId=null;
-    el.innerHTML = pageTitle("تواصلنا","مساحة لمودّتنا: أمنياتنا، امتناننا، رسايلنا، واللي يصعب قوله.") + `<div id="cBody"><div class="empty">…تحميل</div></div>`;
-    try{
-      const [wishes,grat,caps,mood,safe,keys] = await Promise.all([
-        api("GET","/wishes"), api("GET","/gratitude"), api("GET","/capsules"), api("GET","/mood"), api("GET","/safespace"), api("GET","/keys")
-      ]);
-      document.getElementById("cBody").innerHTML =
-        `<div class="card"><div class="eyebrow">فحص حالتنا الآن</div>
-          <div class="actions" style="flex-wrap:wrap;gap:8px;margin-top:6px">
-            ${MOOD_OPT.map(([v,l])=>`<button class="btn ${mood.mine===v?'':'ghost'} sm" data-act="setMood" data-v="${v}">${l}</button>`).join("")}</div>
-          <p class="muted" style="font-size:13px;margin-top:10px">أنت: <b>${esc(moodLabel(mood.mine))}</b> · شريكك: <b>${mood.partner?esc(moodLabel(mood.partner)):"لم يحدّد بعد"}</b></p></div>
-
-        <div class="card"><div class="eyebrow">قائمة أمنياتنا</div>
-          <div class="row"><input id="wText" type="text" placeholder="حاجة نفسنا نعملها سوا…"></div>
-          <div class="actions"><span class="spacer"></span><button class="btn sm" data-act="addWish">أضِف</button></div>
-          ${wishes.length? wishes.map(w=>`<div class="actions" style="justify-content:space-between;padding:6px 0;border-top:1px solid var(--line)">
-            <div style="display:flex;align-items:center;gap:8px"><button class="btn ${w.done?'':'ghost'} sm" data-act="toggleWish" data-id="${esc(w.id)}">${w.done?'✓':'○'}</button>
-            <span style="${w.done?'text-decoration:line-through;opacity:.6':''}">${esc(w.text)}</span></div>
-            <button class="linkbtn" data-act="delWish" data-id="${esc(w.id)}">حذف</button></div>`).join("") : `<p class="muted" style="font-size:13px">ابدأوا بأمنية واحدة.</p>`}</div>
-
-        <div class="card"><div class="eyebrow">مساحة الامتنان</div>
-          <p class="muted" style="margin-top:-6px;font-size:13px">اكتب حاجة بتشكر فيها شريك حياتك — نشوفها إحنا الاتنين.</p>
-          <div class="row"><input id="gText" type="text" placeholder="ممتنّ لك لأنك…"></div>
-          <div class="actions"><span class="spacer"></span><button class="btn sm" data-act="addGrat">أضِف</button></div>
-          ${grat.length? grat.map(g=>`<div class="actions" style="justify-content:space-between;padding:6px 0;border-top:1px solid var(--line)">
-            <span>${esc(g.text)} <span class="pill ${g.mine?'':'warn'}" style="margin-inline-start:6px">${g.mine?'أنا':'شريكي'}</span></span>
-            ${g.mine?`<button class="linkbtn" data-act="delGrat" data-id="${esc(g.id)}">حذف</button>`:""}</div>`).join("") : `<p class="muted" style="font-size:13px">امتنان صغير يصنع فرقًا.</p>`}</div>
-
-        <div class="card"><div class="eyebrow">كتالوج المفاتيح</div>
-          <p class="muted" style="margin-top:-6px;font-size:13px">كل واحد يكتب مفاتيحه: إيه اللي بيهدّيني وإيه اللي بيضايقني — عشان نتعلّم بعض ونراعي بعض.</p>
-          <div class="row" style="margin-top:4px"><label>يهدّيني 🌿</label><input id="keySoothe" type="text" placeholder="بحس بالأمان لما…"></div>
-          <div class="actions" style="margin-bottom:4px"><span class="spacer"></span><button class="btn sm" data-act="addKey" data-kind="soothe">أضِف</button></div>
-          <div class="row"><label>يضايقني ⚠️</label><input id="keyAnnoy" type="text" placeholder="بضايق لما…"></div>
-          <div class="actions"><span class="spacer"></span><button class="btn sm ghost" data-act="addKey" data-kind="annoy">أضِف</button></div>
-          <div class="answers" style="margin-top:12px">
-            <div><div class="muted" style="font-size:12.5px;margin-bottom:2px">مفاتيحي</div>${keyCol(keys.mine,true)}</div>
-            <div><div class="muted" style="font-size:12.5px;margin-bottom:2px">مفاتيح شريكي</div>${keyCol(keys.partner,false)}</div>
-          </div></div>
-
-        <div class="card"><div class="eyebrow">رسالة للمستقبل</div>
-          <p class="muted" style="margin-top:-6px;font-size:13px">اكتب رسالة تُختَم حتى تاريخ تختاره؛ رسالة شريكك تظهر لك بعد تاريخها فقط.</p>
-          <div class="row"><textarea id="capContent" placeholder="رسالة لنا بعد سنة…"></textarea></div>
-          <div class="row"><label>تاريخ الفتح (اختياري)</label><input id="capDate" type="text" placeholder="2027-06-01"></div>
-          <div class="actions"><span class="spacer"></span><button class="btn sm" data-act="addCapsule">اختِم الرسالة</button></div>
-          ${caps.length? caps.map(c=>`<div class="card tight" style="margin-top:8px">
-            <div class="actions" style="justify-content:space-between"><span class="pill ${c.mine?'':'warn'}">${c.mine?'رسالتك':'رسالة شريكك'}</span>${c.openDate?`<span class="pill">📅 ${esc(c.openDate)}</span>`:""}</div>
-            <p style="margin:8px 0 0">${c.sealed?'<span class="muted">🔒 مختومة حتى تاريخها.</span>':esc(c.content)}</p></div>`).join("") : ""}</div>
-
-        <div class="card"><div class="eyebrow">صندوق التفاهم</div>
-          <p class="muted" style="margin-top:-6px;font-size:13px">اطرح موضوعًا يصعب قوله — بهدوء، وبصيغة المشاعر والاحتياج.</p>
-          <div class="row"><label>الموضوع</label><input id="safeTopic" type="text" placeholder="حاجة نفسي نتكلم فيها…"></div>
-          <div class="row"><label>أشعر أنّ…</label><input id="safeFeel" type="text" placeholder="بصراحة بحس إن…"></div>
-          <div class="row"><label>وأحتاج…</label><input id="safeNeed" type="text" placeholder="محتاج منك…"></div>
-          <div class="actions"><span class="spacer"></span><button class="btn sm" data-act="addSafe">ضَعها في الصندوق</button></div>
-          ${safe.length? safe.map(x=>`<div class="card tight" style="margin-top:8px">
-            <div class="actions" style="justify-content:space-between"><b>${esc(x.topic)}</b><span class="pill ${x.status==='addressed'?'':'warn'} dot">${x.status==='addressed'?'تمت معالجته':'مفتوح'}</span></div>
-            ${x.feeling?`<p class="muted" style="font-size:13.5px;margin:6px 0 0">أشعر: ${esc(x.feeling)}</p>`:""}
-            ${x.need?`<p class="muted" style="font-size:13.5px;margin:2px 0 0">أحتاج: ${esc(x.need)}</p>`:""}
-            <div class="actions" style="margin-top:8px"><span class="pill ${x.mine?'':'warn'}">${x.mine?'مني':'من شريكي'}</span>${x.status!=='addressed'?`<div class="spacer"></div><button class="btn soft sm" data-act="safeAddressed" data-id="${esc(x.id)}">تكلّمنا فيه</button>`:""}</div></div>`).join("") : `<p class="muted" style="font-size:13px">الصندوق فاضي — وده كويس.</p>`}</div>`;
-    }catch(e){ document.getElementById("cBody").innerHTML = `<div class="empty">${esc(errMsg(e))}</div>`; }
-  }
-
-  // ---------- actions ----------
   async function go(act, node){
     try{
       if(act==="authMode"){ S.authMode=node.dataset.m; renderOnboarding(); return; }
@@ -178,6 +39,17 @@
       if(act==="library"){ S.view="library"; S.tab="summary"; render(); return; }
 
       if(act==="setProg"){ await api("PUT","/resources/"+S.resourceId+"/progress",{ status:node.dataset.val }); renderResource(); return; }
+      if(act==="savePos"){ const v=(document.getElementById("posInput")||{}).value||""; await api("PUT","/resources/"+S.resourceId+"/position",{ position:v }); toast("اتسجّلت نقطة التوقّف ⏱"); renderResource(); return; }
+      if(act==="clearPos"){ await api("PUT","/resources/"+S.resourceId+"/position",{ position:"" }); toast("اتمسحت نقطة التوقّف"); renderResource(); return; }
+      if(act==="sendResMsg"){ const ta=document.getElementById("rcInput"); const v=((ta&&ta.value)||"").trim(); if(!v) return; await api("POST","/resources/"+S.resourceId+"/chat",{ text:v }); if(ta){ ta.value=""; } _rcSig=""; loadResChat(); return; }
+      if(act==="delResMsg"){ await api("POST","/resources/"+S.resourceId+"/chat/"+node.dataset.id+"/delete"); _rcSig=""; loadResChat(); return; }
+      if(act==="regenCode"){
+        if(!confirm("إعادة توليد كود الإقران:\n\n• هتفصل شريكك الحالي وتلغي وصوله (جلساته وحسابه القديم).\n• هيحتاج ينضم من جديد بالكود الجديد.\n• الكود لمرّة واحدة وبيتمسح بعد ما ينضم.\n\nمتأكد إنك عايز تكمّل؟")) return;
+        const out=await api("POST","/pair/regenerate",{}); S.code=out.pairCode; save(); toast("اتولّد كود إقران جديد — شاركه مع شريكك للانضمام"); render(); return;
+      }
+      if(act==="mutabaana"){ S.view="mutabaana"; render(); return; }
+      if(act==="setProgId"){ await api("PUT","/resources/"+node.dataset.res+"/progress",{ status:node.dataset.val }); _mtbSig=""; loadMutabaana(); return; }
+      if(act==="mtbFilter"){ S.mtbFilter=node.dataset.f; renderMutabaanaBody(_mtbItems); return; }
       if(act==="setPrio"){ await api("PUT","/resources/"+S.resourceId+"/priority",{ priority:node.dataset.val }); toast("اتحدّثت الأولوية"); renderResource(); return; }
       if(act==="setCat"){ await api("PUT","/resources/"+S.resourceId+"/category",{ category:node.dataset.val }); toast("اتحدّث التصنيف"); renderResource(); return; }
       if(act==="setPlaylist"){ S.playlist=node.dataset.pl; renderJourneys(); return; }
@@ -294,7 +166,9 @@
       if(act==="delWish"){ await api("POST","/wishes/"+node.dataset.id+"/delete"); renderConnect(); return; }
       if(act==="addGrat"){ const t=(document.getElementById("gText").value||"").trim(); if(!t) return toast("اكتب امتنانك"); await api("POST","/gratitude",{text:t}); renderConnect(); return; }
       if(act==="delGrat"){ await api("POST","/gratitude/"+node.dataset.id+"/delete"); renderConnect(); return; }
-      if(act==="addCapsule"){ const c=(document.getElementById("capContent").value||"").trim(); if(!c) return toast("اكتب رسالتك"); const d=(document.getElementById("capDate").value||"").trim(); await api("POST","/capsules",{content:c,openDate:d||null}); toast("خُتمت الرسالة"); renderConnect(); return; }
+      if(act==="capMode"){ const wrap=document.getElementById("capMode"); if(wrap)[...wrap.children].forEach(x=>x.classList.toggle("on",x===node)); const dw=document.getElementById("capDateWrap"); if(dw) dw.style.display = node.dataset.mode==="manual"?"none":""; return; }
+      if(act==="addCapsule"){ const c=(document.getElementById("capContent").value||"").trim(); if(!c) return toast("اكتب رسالتك"); const manual=!!(document.querySelector("#capMode button.on")||{}).dataset && (document.querySelector("#capMode button.on")||{}).dataset.mode==="manual"; const d=(document.getElementById("capDate").value||"").trim(); await api("POST","/capsules",{content:c,openDate:manual?null:(d||null),manualSeal:manual}); toast("خُتمت الرسالة"); renderConnect(); return; }
+      if(act==="openCapsule"){ await api("POST","/capsules/"+node.dataset.id+"/open"); toast("اتبعتت لشريكك 💌"); renderConnect(); return; }
       if(act==="addSafe"){ const topic=(document.getElementById("safeTopic").value||"").trim(); if(!topic) return toast("اكتب الموضوع"); await api("POST","/safespace",{topic,feeling:(document.getElementById("safeFeel").value||"").trim(),need:(document.getElementById("safeNeed").value||"").trim()}); toast("أُضيف للصندوق"); renderConnect(); return; }
       if(act==="safeAddressed"){ await api("POST","/safespace/"+node.dataset.id+"/addressed"); renderConnect(); return; }
       if(act==="seedCurriculum"){ const r=await api("POST","/journey/seed"); toast(r.already? "المنهج مستورد بالفعل" : "تم استيراد "+r.seeded+" موردًا"); renderJourneys(); return; }
@@ -309,16 +183,42 @@
       if(act==="budget"){ S.view="budget"; render(); return; }
       if(act==="shopping"){ S.view="shopping"; render(); return; }
       if(act==="settings"){ S.view="settings"; render(); return; }
+      if(act==="chat"){ S.view="chat"; render(); return; }
+      if(act==="sendMsg"){
+        const ta=document.getElementById("chatInput"); const t=(ta&&ta.value||"").trim();
+        if(!t) return;
+        if(ta){ ta.value=""; ta.style.height=""; }
+        try{
+          if(S.chatEdit){ const id=S.chatEdit; S.chatEdit=null; await api("POST","/messages/"+id+"/edit",{ text:t }); }
+          else { await api("POST","/messages",{ text:t, replyTo: S.chatReply?S.chatReply.id:null }); }
+          S.chatReply=null; _chatSig=""; renderComposer(); await loadChat();
+        }catch(e){ if(ta) ta.value=t; toast(errMsg(e)); }
+        return;
+      }
+      if(act==="chatMenu"){ S.chatMenu = (S.chatMenu===node.dataset.id)?null:node.dataset.id; renderChatMsgs(_chatMsgs, _chatPartnerRead, false); return; }
+      if(act==="chatReply"){ const m=_chatMsgs.find(x=>x.id===node.dataset.id); if(m) S.chatReply={id:m.id,text:m.text}; S.chatMenu=null; renderChatMsgs(_chatMsgs,_chatPartnerRead,false); renderComposer(); return; }
+      if(act==="chatCopy"){ const m=_chatMsgs.find(x=>x.id===node.dataset.id); try{ await navigator.clipboard.writeText(m?m.text:""); toast("اتنسخت الرسالة"); }catch(_){ toast("منعرفش ننسخ"); } S.chatMenu=null; renderChatMsgs(_chatMsgs,_chatPartnerRead,false); return; }
+      if(act==="chatEditStart"){ S.chatEdit=node.dataset.id; S.chatReply=null; S.chatMenu=null; renderChatMsgs(_chatMsgs,_chatPartnerRead,false); renderComposer(); return; }
+      if(act==="chatDelete"){ S.chatMenu=null; await api("POST","/messages/"+node.dataset.id+"/delete"); _chatSig=""; await loadChat(); return; }
+      if(act==="chatCancelCompose"){ S.chatReply=null; S.chatEdit=null; renderComposer(); return; }
+      if(act==="doDrawerSearch"){ const v=(document.getElementById("dwSearch")||{}).value||""; S.searchQ=v.trim(); S.view="search"; closeDrawer(); render(); return; }
+      if(act==="search"){ S.view="search"; render(); return; }
 
       // ---- tasks ----
       if(act==="addTask"){
-        const title=(document.getElementById("tTitle").value||"").trim(); if(!title) return toast("اكتب المهمة");
+        const title=(document.getElementById("tTitle").value||"").trim(); if(!title) return toast("اكتب اسم المهمة");
+        const details=(document.getElementById("tDetails").value||"").trim();
         const owner=(document.querySelector("#tOwner button.on")||{}).dataset?.own || "both";
         const due=(document.getElementById("tDue").value||"").trim();
-        await api("POST","/tasks",{title,owner,due:due||null}); toast("أُضيفت المهمة"); renderTasks(); return;
+        const mode=(document.querySelector("#tMode button.on")||{}).dataset?.mode || "simple";
+        const steps = mode==="steps" ? (document.getElementById("tSteps").value||"").split("\n").map(x=>x.trim()).filter(Boolean) : [];
+        await api("POST","/tasks",{title,details:details||null,owner,due:due||null,steps}); toast("أُضيفت المهمة"); renderTasks(); return;
       }
       if(act==="toggleTask"){ await api("POST","/tasks/"+node.dataset.id+"/toggle"); reloadTasks(); return; }
       if(act==="delTask"){ await api("POST","/tasks/"+node.dataset.id+"/delete"); reloadTasks(); return; }
+      if(act==="toggleStep"){ await api("POST","/tasks/"+node.dataset.id+"/steps/"+node.dataset.step+"/toggle"); reloadTasks(); return; }
+      if(act==="delStep"){ await api("POST","/tasks/"+node.dataset.id+"/steps/"+node.dataset.step+"/delete"); reloadTasks(); return; }
+      if(act==="addStep"){ const inp=document.getElementById("ns-"+node.dataset.id); const t=(inp&&inp.value||"").trim(); if(!t) return toast("اكتب المرحلة"); await api("POST","/tasks/"+node.dataset.id+"/steps",{text:t}); reloadTasks(); return; }
 
       // ---- budget ----
       if(act==="addBudget"){
@@ -336,14 +236,29 @@
       if(act==="delShop"){ await api("POST","/shopping/"+node.dataset.id+"/delete"); reloadShopping(); return; }
 
       // ---- settings: export ----
-      if(act==="export"){
-        toast("جاري التصدير…");
-        const out={ exportedAt:new Date().toISOString() };
-        const grab=async(k,path)=>{ try{ out[k]=await api("GET",path); }catch(e){ out[k]=[]; } };
-        await Promise.all([grab("resources","/resources"),grab("decisions","/decisions"),grab("tasks","/tasks"),grab("budget","/budget"),grab("shopping","/shopping")]);
-        const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
-        const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download="sakan-export.json"; link.click(); URL.revokeObjectURL(link.href);
-        toast("تم التصدير"); return;
+      if(act==="doBackup"){
+        try{
+          toast("جاري التحضير…");
+          const out = await api("GET","/backup");
+          const blob = new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
+          const link = document.createElement("a"); link.href=URL.createObjectURL(blob);
+          link.download = "sakan-backup-"+new Date().toISOString().slice(0,10)+".json"; link.click();
+          URL.revokeObjectURL(link.href); toast("اتنزّلت النسخة الاحتياطية ✓");
+        }catch(e){ toast(errMsg(e)); }
+        return;
+      }
+      if(act==="doRestore"){ const rf=document.getElementById("restoreFile"); if(rf) rf.click(); return; }
+      if(act==="toggleNotif"){ const p=document.getElementById("ntfPanel"); if(p && !p.hidden) closeNotif(); else openNotif(); return; }
+      if(act==="closeNotif"){ closeNotif(); return; }
+      if(act==="toggleFab"){ if(S.fabOpen) closeFab(); else openFab(); return; }
+      if(act==="closeFab"){ closeFab(); return; }
+      if(act==="notifGo"){
+        const target=node.dataset.target, res=node.dataset.res||"";
+        closeNotif();
+        if(target==="chat"){ openFab(); return; }
+        if(target==="resChat" && res){ S.resourceId=res; S.view="resource"; S.tab="chat"; render(); return; }
+        if(res){ S.resourceId=res; S.view="resource"; S.tab="summary"; render(); return; }
+        return go(target||"home");
       }
     }catch(e){
       if(e.code==="UNAUTHENTICATED"){ toast(errMsg(e)); return logout(); }
@@ -371,7 +286,47 @@
     if(cat){ [...cat.parentElement.children].forEach(x=>x.classList.toggle("on", x===cat)); return; }
   });
 
+  // مَخرج إضافي: زر Escape يقفل الشات العائم أو لوحة الإشعارات لو مفتوحة
+  document.addEventListener("keydown",(ev)=>{
+    if(ev.key!=="Escape") return;
+    if(S.fabOpen){ closeFab(); return; }
+    const np=document.getElementById("ntfPanel"); if(np && !np.hidden){ closeNotif(); }
+  });
+
+  // زر الرجوع (back) أو جيتشر الرجوع يقفل الشات العائم بدل ما يطلّع من التطبيق
+  window.addEventListener("popstate",()=>{ if(S.fabOpen) closeFab(true); });
+
   document.getElementById("foot").innerHTML = "سكن · مساحتنا إحنا الاتنين — خاصّة بطبيعتها، من غير مشاركة عامة.";
+
+  // نبضة موحّدة: تحدّث حضوري، تجيب حضور شريكي + الإشعارات، تحدّث الشارات، وتشغّل صوت لو في رسالة جديدة
+  let _audioCtx = null;
+  function playBlip(){
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+      _audioCtx = _audioCtx || new AC();
+      if(_audioCtx.state==="suspended") _audioCtx.resume();
+      const now=_audioCtx.currentTime;
+      const beep=(f,t0,dur,vol)=>{ const o=_audioCtx.createOscillator(), g=_audioCtx.createGain(); o.type="sine"; o.frequency.value=f; g.gain.setValueAtTime(0.0001,now+t0); g.gain.exponentialRampToValueAtTime(vol,now+t0+0.02); g.gain.exponentialRampToValueAtTime(0.0001,now+t0+dur); o.connect(g); g.connect(_audioCtx.destination); o.start(now+t0); o.stop(now+t0+dur+0.02); };
+      beep(660,0,0.32,0.16); beep(880,0.13,0.34,0.13);
+    }catch(_){}
+  }
+  async function tick(){
+    if(!S.token) return;
+    try{ S.presence = await api("POST","/presence",{}); }catch(_){}
+    try{
+      const u = await api("GET","/updates");
+      const prev = (S._prevChat==null) ? null : S._prevChat;
+      S.updates = u; S._prevChat = u.chatUnread||0;
+      if(prev!=null && (u.chatUnread||0) > prev && !S.fabOpen && S.view!=="chat") playBlip();
+    }catch(_){}
+    renderPresence(); renderChatPresence(); if(S.fabOpen) renderFab(); applyBadges();
+  }
+  tick();
+  setInterval(()=>{ if(document.visibilityState!=="hidden") tick(); }, 60000);
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") tick(); });
+
   render();
 })();
 
+
+})();

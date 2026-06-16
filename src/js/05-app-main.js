@@ -91,14 +91,16 @@
       if(act==="goDiscuss"){ S.tab="discussion"; renderResource(); return; }
       if(act==="genQuestions"){ await api("POST","/resources/"+S.resourceId+"/questions/generate"); toast("تم توليد الأسئلة"); renderResource(); return; }
       if(act==="addQ"){ const txt=(document.getElementById("qNew").value||"").trim(); if(!txt) return toast("اكتب السؤال"); await api("POST","/resources/"+S.resourceId+"/questions",{text:txt}); renderResource(); return; }
+      if(act==="addTopic"){ const inp=document.getElementById("topicNew"); const txt=(inp&&inp.value||"").trim(); if(!txt) return toast("اكتب موضوع النقاش"); await api("POST","/questions",{text:txt}); toast("اتفتح الموضوع 💬"); renderDiscussionsAll(); return; }
 
       if(act==="saveAns"){
         const q=node.dataset.q; const box=document.querySelector(`.q[data-q="${q}"] .myans`);
         const text=(box.value||"").trim(); if(!text) return toast("اكتب إجابتك");
-        await api("PUT","/questions/"+q+"/responses",{text}); toast("حُفظت إجابتك"); renderResource(); return;
+        await api("PUT","/questions/"+q+"/responses",{text}); toast("حُفظت إجابتك");
+        if(S.view==="discussions") renderDiscussionsAll(); else renderResource(); return;
       }
-      if(act==="reveal"){ await api("POST","/questions/"+node.dataset.q+"/reveal"); toast("انكشفت الإجابتان"); renderResource(); return; }
-      if(act==="force"){ if(confirm("الكشف الآن قبل أن يجيب الطرف الآخر؟")){ await api("POST","/questions/"+node.dataset.q+"/force-reveal"); renderResource(); } return; }
+      if(act==="reveal"){ await api("POST","/questions/"+node.dataset.q+"/reveal"); toast("انكشفت الإجابتان"); if(S.view==="discussions") renderDiscussionsAll(); else renderResource(); return; }
+      if(act==="force"){ if(confirm("الكشف الآن قبل أن يجيب الطرف الآخر؟")){ await api("POST","/questions/"+node.dataset.q+"/force-reveal"); if(S.view==="discussions") renderDiscussionsAll(); else renderResource(); } return; }
 
       if(act==="createDec"){
         const statement=(document.getElementById("dStmt").value||"").trim();
@@ -120,6 +122,7 @@
       if(act==="decisionlog"){ S.view="decisionlog"; render(); return; }
       if(act==="connect"){ S.view="connect"; render(); return; }
       if(act==="myjourney"){ S.view="myjourney"; render(); return; }
+      if(act==="jrnWho"){ S.jrnWho=node.dataset.w; const sw=document.getElementById("jrnWho"); if(sw)[...sw.children].forEach(x=>x.classList.toggle("on",x===node)); renderJourneyPanel(); return; }
 
       // ---- PIN Lock actions ----
       if(act==="pinKey"){ pinHandleKey(node.dataset.k); return; }
@@ -176,6 +179,15 @@
       if(act==="capMode"){ const wrap=document.getElementById("capMode"); if(wrap)[...wrap.children].forEach(x=>x.classList.toggle("on",x===node)); const dw=document.getElementById("capDateWrap"); if(dw) dw.style.display = node.dataset.mode==="manual"?"none":""; return; }
       if(act==="addCapsule"){ const c=(document.getElementById("capContent").value||"").trim(); if(!c) return toast("اكتب رسالتك"); const manual=!!(document.querySelector("#capMode button.on")||{}).dataset && (document.querySelector("#capMode button.on")||{}).dataset.mode==="manual"; const d=(document.getElementById("capDate").value||"").trim(); await api("POST","/capsules",{content:c,openDate:manual?null:(d||null),manualSeal:manual}); toast("خُتمت الرسالة"); renderConnect(); return; }
       if(act==="openCapsule"){ await api("POST","/capsules/"+node.dataset.id+"/open"); toast("اتبعتت لشريكك 💌"); renderConnect(); return; }
+      if(act==="delCapsule"){ if(!confirm("تحذف الرسالة المؤجّلة دي نهائيًا؟")) return; await api("POST","/capsules/"+node.dataset.id+"/delete"); toast("اتحذفت الرسالة"); renderConnect(); return; }
+      if(act==="convCapsule"){
+        const to=node.dataset.to;
+        if(to==="manual"){ await api("POST","/capsules/"+node.dataset.id+"/convert",{manualSeal:true}); toast("بقت مختومة — تبعتها بنفسك"); renderConnect(); return; }
+        const d=(prompt("تاريخ الفتح (YYYY-MM-DD):","")||"").trim(); if(!d) return;
+        try{ await api("POST","/capsules/"+node.dataset.id+"/convert",{manualSeal:false,openDate:d}); toast("هتتفتح في "+d+" 📅"); renderConnect(); }
+        catch(e){ toast(e.code==="BAD_DATE"?"تاريخ غير صالح":errMsg(e)); }
+        return;
+      }
       if(act==="addSafe"){ const topic=(document.getElementById("safeTopic").value||"").trim(); if(!topic) return toast("اكتب الموضوع"); await api("POST","/safespace",{topic,feeling:(document.getElementById("safeFeel").value||"").trim(),need:(document.getElementById("safeNeed").value||"").trim()}); toast("أُضيف للصندوق"); renderConnect(); return; }
       if(act==="safeAddressed"){ await api("POST","/safespace/"+node.dataset.id+"/addressed"); renderConnect(); return; }
       if(act==="seedCurriculum"){ const r=await api("POST","/journey/seed"); toast(r.already? "المنهج مستورد بالفعل" : "تم استيراد "+r.seeded+" موردًا"); renderJourneys(); return; }

@@ -149,25 +149,13 @@
       <div class="fab-foot" id="chatComposer"></div>`;
   }
   function openFab(){
-    if(S.fabOpen) return;
     S.fabOpen = true;
-    const bg=document.getElementById("fabBg"); if(bg) bg.hidden=false;
     const p=document.getElementById("fabPanel"); if(p) p.hidden=false;
     renderFab(); renderComposer(); _chatSig=""; loadChat();
-    try{ history.pushState({sakanFab:true}, ""); _fabHist=true; }catch(_){ _fabHist=false; }
     if(_fabPoll) clearInterval(_fabPoll);
-    _fabPoll = setInterval(()=>{ if(!S.fabOpen){ clearInterval(_fabPoll); _fabPoll=null; return; } loadChat(); }, 10000);
+    _fabPoll = setInterval(()=>{ if(!S.fabOpen){ clearInterval(_fabPoll); _fabPoll=null; return; } loadChat(); }, 4000);
   }
-  function closeFab(fromPop){
-    if(!S.fabOpen && !_fabHist) return;
-    S.fabOpen=false;
-    const p=document.getElementById("fabPanel"); if(p) p.hidden=true;
-    const bg=document.getElementById("fabBg"); if(bg) bg.hidden=true;
-    if(_fabPoll){ clearInterval(_fabPoll); _fabPoll=null; }
-    applyBadges();
-    // لو الإغلاق مش جاي من زر الباك، نشيل حالة الـ history اللي دفعناها
-    if(_fabHist){ _fabHist=false; if(!fromPop){ try{ history.back(); }catch(_){} } }
-  }
+  function closeFab(){ S.fabOpen=false; const p=document.getElementById("fabPanel"); if(p) p.hidden=true; if(_fabPoll){ clearInterval(_fabPoll); _fabPoll=null; } applyBadges(); }
 
   // ---------- header ----------
   function renderBar(){

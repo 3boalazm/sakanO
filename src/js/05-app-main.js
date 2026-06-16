@@ -68,14 +68,20 @@
       if(act==="copyPrompt"){ try{ await navigator.clipboard.writeText(NB_PROMPT); toast("اتنسخ البرومت ✦"); }catch(e){ toast("منعرفش ننسخ — حدّده يدوي"); } return; }
       if(act==="copyAppUrl"){ try{ await navigator.clipboard.writeText(APP_URL); toast("اتنسخ رابط التطبيق"); }catch(e){} return; }
       if(act==="importBulk"){
-        const lines=(document.getElementById("bulk").value||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-        if(!lines.length) return toast("الصق رابطًا واحدًا على الأقل");
+        const raw=(document.getElementById("bulk").value||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        if(!raw.length) return toast("الصق رابطًا واحدًا على الأقل");
+        // كل سطر: «رابط» لوحده، أو «العنوان | الرابط | المصدر» (المصدر اختياري)
+        const items=raw.map(ln=>{
+          if(ln.includes("|")){ const p=ln.split("|").map(s=>s.trim()); const link=p[1]||""; return { title:p[0]||titleFromUrl(link), link, speaker:p[2]||null }; }
+          return { title:titleFromUrl(ln), link:ln, speaker:null };
+        }).filter(x=>x.link);
+        if(!items.length) return toast("مفيش روابط صالحة");
         node.disabled=true; const orig=node.textContent;
-        const q=lines.slice(); let done=0, ok=0;
-        async function worker(){ while(q.length){ const link=q.shift(); try{ await api("POST","/resources",{ title:titleFromUrl(link), link }); ok++; }catch(e){} done++; node.textContent="…"+done+"/"+lines.length; } }
-        await Promise.all(Array.from({length:Math.min(4,lines.length)}, worker));   // 4 at a time → أسرع بكتير
+        const q=items.slice(); let done=0, ok=0;
+        async function worker(){ while(q.length){ const it=q.shift(); try{ await api("POST","/resources",{ title:it.title, link:it.link, speaker:it.speaker }); ok++; }catch(e){} done++; node.textContent="…"+done+"/"+items.length; } }
+        await Promise.all(Array.from({length:Math.min(4,items.length)}, worker));   // 4 at a time → أسرع بكتير
         node.disabled=false; node.textContent=orig;
-        toast("تم استيراد "+ok+" من "+lines.length+" — تقدر تعيد تسميتها لاحقًا");
+        toast("تم استيراد "+ok+" من "+items.length);
         renderLibrary(); return;
       }
       if(act==="open" || node?.dataset.open){ S.resourceId=node.dataset.open; S.view="resource"; S.tab="summary"; render(); return; }

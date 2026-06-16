@@ -212,7 +212,7 @@
   .auth-field{ display:flex; align-items:center; gap:10px; background:rgba(0,0,0,.28); border:1px solid rgba(255,255,255,.18); border-radius:40px; padding:0 18px; margin-bottom:13px; transition:border-color .2s, box-shadow .2s, background .2s; }
   .auth-field:focus-within{ border-color:#e6c97a; background:rgba(255,255,255,.2); box-shadow:0 0 0 3px rgba(201,161,74,.3); }
   .auth-field .af-ico{ font-size:15px; flex:none; opacity:.85; }
-  .auth-field input{ flex:1; min-width:0; border:none; background:transparent; padding:14px 0; font-family:inherit; font-size:15px; color:#fff; outline:none; }
+  .auth-card .auth-field input{ flex:1; min-width:0; border:none; background:transparent; padding:14px 0; font-family:inherit; font-size:15px; color:#fff; outline:none; }
   .auth-field input::placeholder{ color:rgba(244,236,214,.6); }
   .auth-field input:-webkit-autofill{ -webkit-text-fill-color:#fff; transition:background-color 9999s }
   .auth-field .af-eye{ background:none; border:none; cursor:pointer; font-size:15px; opacity:.8; padding:4px; flex:none; }
@@ -246,6 +246,21 @@
   }
   textarea{resize:vertical; min-height:84px}
   input:focus, textarea:focus{border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-soft)}
+  /* شريط البحث: pill نضيف بأيقونة جوّه (RTL: الأيقونة يمين، النص بيبدأ بعدها) */
+  input[type=search]{
+    -webkit-appearance:none; appearance:none;
+    width:100%; font:inherit; color:var(--ink); background-color:var(--field-bg);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23949aa6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.5' y2='16.5'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 16px center; background-size:18px;
+    border:1px solid var(--line); border-radius:999px; padding:14px 46px 14px 18px; outline:none;
+    box-shadow:var(--shadow-sm); transition:border-color .15s, box-shadow .15s, background-color .15s;
+  }
+  input[type=search]:focus{ border-color:var(--primary); box-shadow:0 0 0 4px var(--primary-soft) }
+  input[type=search]::placeholder{ color:var(--muted) }
+  input[type=search]::-webkit-search-cancel-button{
+    -webkit-appearance:none; height:15px; width:15px; cursor:pointer; margin-inline-start:6px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23949aa6' stroke-width='2.4' stroke-linecap='round'%3E%3Cline x1='5' y1='5' x2='19' y2='19'/%3E%3Cline x1='19' y1='5' x2='5' y2='19'/%3E%3C/svg%3E") center/contain no-repeat;
+  }
   .row{margin-bottom:14px}
   button.btn{
     font:inherit; font-weight:700; cursor:pointer; border-radius:var(--radius-sm); padding:11px 20px; border:1px solid transparent;
@@ -1757,8 +1772,8 @@
         <p class="muted" style="margin:-2px 0 10px;font-size:13px">الشارة <b>أنا / شريكي</b> بتوريكم مين سمع إيه ووصل لفين.</p>
         <div id="list"><div class="empty">…تحميل</div></div></div>`
     + `<details class="card" style="margin-top:18px"><summary style="cursor:pointer;font-weight:700;color:var(--primary-ink)">استيراد سريع لروابط كتير</summary>
-        <p class="muted" style="margin-top:8px;font-size:13px">رابط في كل سطر.</p>
-        <div class="row"><textarea id="bulk" placeholder="https://...&#10;https://..." style="min-height:110px"></textarea></div>
+        <p class="muted" style="margin-top:8px;font-size:13px">سطر لكل مورد. تقدر تكتب الرابط لوحده، أو تنظّمه كده: <b>العنوان | الرابط | المصدر</b> (المصدر اختياري).</p>
+        <div class="row"><textarea id="bulk" placeholder="ألف باء الزواج – مشكلة الزواج | https://youtu.be/... | د. عبد الرحمن الهاشمي&#10;https://youtu.be/..." style="min-height:110px"></textarea></div>
         <button class="btn ghost" data-act="importBulk">استورد الكل</button></details>`;
     try{
       const [items, questions, decisions] = await Promise.all([api("GET","/resources"), api("GET","/questions").catch(()=>[]), api("GET","/decisions").catch(()=>[])]);
@@ -2259,14 +2274,20 @@
       if(act==="copyPrompt"){ try{ await navigator.clipboard.writeText(NB_PROMPT); toast("اتنسخ البرومت ✦"); }catch(e){ toast("منعرفش ننسخ — حدّده يدوي"); } return; }
       if(act==="copyAppUrl"){ try{ await navigator.clipboard.writeText(APP_URL); toast("اتنسخ رابط التطبيق"); }catch(e){} return; }
       if(act==="importBulk"){
-        const lines=(document.getElementById("bulk").value||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-        if(!lines.length) return toast("الصق رابطًا واحدًا على الأقل");
+        const raw=(document.getElementById("bulk").value||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        if(!raw.length) return toast("الصق رابطًا واحدًا على الأقل");
+        // كل سطر: «رابط» لوحده، أو «العنوان | الرابط | المصدر» (المصدر اختياري)
+        const items=raw.map(ln=>{
+          if(ln.includes("|")){ const p=ln.split("|").map(s=>s.trim()); const link=p[1]||""; return { title:p[0]||titleFromUrl(link), link, speaker:p[2]||null }; }
+          return { title:titleFromUrl(ln), link:ln, speaker:null };
+        }).filter(x=>x.link);
+        if(!items.length) return toast("مفيش روابط صالحة");
         node.disabled=true; const orig=node.textContent;
-        const q=lines.slice(); let done=0, ok=0;
-        async function worker(){ while(q.length){ const link=q.shift(); try{ await api("POST","/resources",{ title:titleFromUrl(link), link }); ok++; }catch(e){} done++; node.textContent="…"+done+"/"+lines.length; } }
-        await Promise.all(Array.from({length:Math.min(4,lines.length)}, worker));   // 4 at a time → أسرع بكتير
+        const q=items.slice(); let done=0, ok=0;
+        async function worker(){ while(q.length){ const it=q.shift(); try{ await api("POST","/resources",{ title:it.title, link:it.link, speaker:it.speaker }); ok++; }catch(e){} done++; node.textContent="…"+done+"/"+items.length; } }
+        await Promise.all(Array.from({length:Math.min(4,items.length)}, worker));   // 4 at a time → أسرع بكتير
         node.disabled=false; node.textContent=orig;
-        toast("تم استيراد "+ok+" من "+lines.length+" — تقدر تعيد تسميتها لاحقًا");
+        toast("تم استيراد "+ok+" من "+items.length);
         renderLibrary(); return;
       }
       if(act==="open" || node?.dataset.open){ S.resourceId=node.dataset.open; S.view="resource"; S.tab="summary"; render(); return; }

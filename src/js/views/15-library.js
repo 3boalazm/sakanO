@@ -80,8 +80,8 @@
         <p class="muted" style="margin:-2px 0 10px;font-size:13px">الشارة <b>أنا / شريكي</b> بتوريكم مين سمع إيه ووصل لفين.</p>
         <div id="list"><div class="empty">…تحميل</div></div></div>`
     + `<details class="card" style="margin-top:18px"><summary style="cursor:pointer;font-weight:700;color:var(--primary-ink)">استيراد سريع لروابط كتير</summary>
-        <p class="muted" style="margin-top:8px;font-size:13px">رابط في كل سطر.</p>
-        <div class="row"><textarea id="bulk" placeholder="https://...&#10;https://..." style="min-height:110px"></textarea></div>
+        <p class="muted" style="margin-top:8px;font-size:13px">سطر لكل مورد. تقدر تكتب الرابط لوحده، أو تنظّمه كده: <b>العنوان | الرابط | المصدر</b> (المصدر اختياري).</p>
+        <div class="row"><textarea id="bulk" placeholder="ألف باء الزواج – مشكلة الزواج | https://youtu.be/... | د. عبد الرحمن الهاشمي&#10;https://youtu.be/..." style="min-height:110px"></textarea></div>
         <button class="btn ghost" data-act="importBulk">استورد الكل</button></details>`;
     try{
       const [items, questions, decisions] = await Promise.all([api("GET","/resources"), api("GET","/questions").catch(()=>[]), api("GET","/decisions").catch(()=>[])]);

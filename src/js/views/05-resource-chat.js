@@ -13,7 +13,7 @@
     _rcSig = "";
     loadResChat();
     if(_rcPoll) clearInterval(_rcPoll);
-    _rcPoll = setInterval(()=>{ if(S.view!=="resource" || S.tab!=="chat"){ clearInterval(_rcPoll); _rcPoll=null; return; } loadResChat(); }, 8000);
+    _rcPoll = setInterval(()=>{ if(S.view!=="resource" || S.tab!=="chat"){ clearInterval(_rcPoll); _rcPoll=null; return; } loadResChat(); }, 15000);
   }
   async function loadResChat(){
     const rid = S.resourceId; if(!rid) return;

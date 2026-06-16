@@ -322,7 +322,7 @@
     renderPresence(); renderChatPresence(); if(S.fabOpen) renderFab(); applyBadges();
   }
   tick();
-  setInterval(()=>{ if(document.visibilityState!=="hidden") tick(); }, 15000);
+  setInterval(()=>{ if(document.visibilityState!=="hidden") tick(); }, 60000);
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") tick(); });
 
   render();

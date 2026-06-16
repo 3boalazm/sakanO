@@ -72,7 +72,7 @@
     renderComposer();
     renderChatPresence();
     loadChat();
-    _chatPoll = setInterval(()=>{ if(S.view!=="chat"){ clearInterval(_chatPoll); _chatPoll=null; return; } loadChat(); }, 4000);
+    _chatPoll = setInterval(()=>{ if(S.view!=="chat"){ clearInterval(_chatPoll); _chatPoll=null; return; } loadChat(); }, 10000);
   }
 
   // ---------- دردشة المورد: نقاش حرّ خاص بكل حلقة/فيديو ----------

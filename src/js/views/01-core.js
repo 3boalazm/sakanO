@@ -21,7 +21,7 @@
     renderBar();
     document.body.classList.toggle("pre-auth", !S.token || S.view==="pinlock");
     if(S.view==="pinlock") return renderPinLock();
-    if(!S.token){ return renderOnboarding(); }
+    if(!S.token){ closeFab(); return renderOnboarding(); }
     if(S.view==="resource" && S.resourceId){ return renderResource(); }
     if(S.view==="home") return renderHome();
     if(S.view==="journeys") return renderJourneys();

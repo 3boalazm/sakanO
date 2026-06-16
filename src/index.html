@@ -557,7 +557,7 @@
     if(!res.ok){
       const code = data && data.error ? data.error.code : ("HTTP_"+res.status);
       if((code==="UNAUTHENTICATED" || res.status===401) && S.token){
-        S.token=null; S.code=null; save(); S.view="onboarding"; render(); toast("انتهت الجلسة — سجّل دخولك تاني");
+        S.token=null; S.code=null; save(); closeFab(); S.view="onboarding"; render(); toast("انتهت الجلسة — سجّل دخولك تاني");
       }
       const e=new Error(code); e.code=code; e.data=data; throw e;
     }
@@ -599,7 +599,7 @@
     localStorage.removeItem("sakan_token"); localStorage.removeItem("sakan_code");
     localStorage.removeItem("sakan_name"); localStorage.removeItem(PIN_KEY); localStorage.removeItem(PIN_WHO);
     S.token=S.code=S.name=null; S.pinEntry=""; S.pinWho=null;
-    S.view="onboarding"; closeDrawer(); render();
+    S.view="onboarding"; closeDrawer(); closeFab(); render();
   }
 
   // ---------- الدرج الجانبي (تقسيم زي زاد) ----------
@@ -760,7 +760,7 @@
     renderFab(); renderComposer(); _chatSig=""; loadChat();
     try{ history.pushState({sakanFab:true}, ""); _fabHist=true; }catch(_){ _fabHist=false; }
     if(_fabPoll) clearInterval(_fabPoll);
-    _fabPoll = setInterval(()=>{ if(!S.fabOpen){ clearInterval(_fabPoll); _fabPoll=null; return; } loadChat(); }, 4000);
+    _fabPoll = setInterval(()=>{ if(!S.fabOpen){ clearInterval(_fabPoll); _fabPoll=null; return; } loadChat(); }, 10000);
   }
   function closeFab(fromPop){
     if(!S.fabOpen && !_fabHist) return;
@@ -826,7 +826,7 @@
     renderBar();
     document.body.classList.toggle("pre-auth", !S.token || S.view==="pinlock");
     if(S.view==="pinlock") return renderPinLock();
-    if(!S.token){ return renderOnboarding(); }
+    if(!S.token){ closeFab(); return renderOnboarding(); }
     if(S.view==="resource" && S.resourceId){ return renderResource(); }
     if(S.view==="home") return renderHome();
     if(S.view==="journeys") return renderJourneys();
@@ -1042,7 +1042,7 @@
       + `<div id="mtbBody"><div class="empty">…تحميل</div></div>`;
     _mtbSig = "";
     loadMutabaana();
-    _mtbPoll = setInterval(()=>{ if(S.view!=="mutabaana"){ clearInterval(_mtbPoll); _mtbPoll=null; return; } loadMutabaana(); }, 15000);
+    _mtbPoll = setInterval(()=>{ if(S.view!=="mutabaana"){ clearInterval(_mtbPoll); _mtbPoll=null; return; } loadMutabaana(); }, 30000);
   }
 
   // ---------- شاتنا: محادثة خاصة ١:١ زيّ تيليجرام (server-mediated + polling) ----------
@@ -1120,7 +1120,7 @@
     renderComposer();
     renderChatPresence();
     loadChat();
-    _chatPoll = setInterval(()=>{ if(S.view!=="chat"){ clearInterval(_chatPoll); _chatPoll=null; return; } loadChat(); }, 4000);
+    _chatPoll = setInterval(()=>{ if(S.view!=="chat"){ clearInterval(_chatPoll); _chatPoll=null; return; } loadChat(); }, 10000);
   }
 
   // ---------- دردشة المورد: نقاش حرّ خاص بكل حلقة/فيديو ----------
@@ -1139,7 +1139,7 @@
     _rcSig = "";
     loadResChat();
     if(_rcPoll) clearInterval(_rcPoll);
-    _rcPoll = setInterval(()=>{ if(S.view!=="resource" || S.tab!=="chat"){ clearInterval(_rcPoll); _rcPoll=null; return; } loadResChat(); }, 8000);
+    _rcPoll = setInterval(()=>{ if(S.view!=="resource" || S.tab!=="chat"){ clearInterval(_rcPoll); _rcPoll=null; return; } loadResChat(); }, 15000);
   }
   async function loadResChat(){
     const rid = S.resourceId; if(!rid) return;
@@ -2513,7 +2513,7 @@
     renderPresence(); renderChatPresence(); if(S.fabOpen) renderFab(); applyBadges();
   }
   tick();
-  setInterval(()=>{ if(document.visibilityState!=="hidden") tick(); }, 15000);
+  setInterval(()=>{ if(document.visibilityState!=="hidden") tick(); }, 60000);
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") tick(); });
 
   render();

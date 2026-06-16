@@ -87,7 +87,7 @@
       + `<div id="mtbBody"><div class="empty">…تحميل</div></div>`;
     _mtbSig = "";
     loadMutabaana();
-    _mtbPoll = setInterval(()=>{ if(S.view!=="mutabaana"){ clearInterval(_mtbPoll); _mtbPoll=null; return; } loadMutabaana(); }, 15000);
+    _mtbPoll = setInterval(()=>{ if(S.view!=="mutabaana"){ clearInterval(_mtbPoll); _mtbPoll=null; return; } loadMutabaana(); }, 30000);
   }
 
   // ---------- شاتنا: محادثة خاصة ١:١ زيّ تيليجرام (server-mediated + polling) ----------

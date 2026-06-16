@@ -1002,10 +1002,15 @@
     </div>`;
     // فلتر بحالة المتابعة: الكل / لم يتم البدء / جاري المشاهدة / تمت المشاهدة (حسب متابعتي)
     const F = S.mtbFilter || "all";
+    const who = S.mtbWho || "mine";   // الفلتر يطبّق على متابعة مين
     const chip = (val,lbl)=>{ const a=F===val; return `<button data-act="mtbFilter" data-f="${val}" style="width:auto;padding:6px 13px;border-radius:99px;border:1px solid ${a?'transparent':'var(--line)'};background:${a?'linear-gradient(135deg,var(--brand-mid,#1a5d47),var(--brand-deep,#0e3b2e))':'var(--surface)'};color:${a?'#fff':'var(--ink)'};font:inherit;font-size:12.5px;font-weight:700;cursor:pointer">${lbl}</button>`; };
-    html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:14px 2px 2px">${chip("all","الكل")}${chip("not_started","لم يتم البدء")}${chip("in_progress","جاري المشاهدة")}${chip("completed","تمت المشاهدة")}</div>`;
-    const matchF = (r)=>{ const p=r.prog||{mine:"not_started"}; if(F==="all") return true; return (p.mine||"not_started")===F; };
-    const shown = items.filter(matchF);
+    const whoChip = (val,lbl)=>{ const a=who===val; return `<button data-act="mtbWho" data-w="${val}" style="width:auto;padding:5px 12px;border-radius:99px;border:1px solid ${a?'transparent':'var(--line)'};background:${a?'var(--brand-gold,#c9a14a)':'var(--surface)'};color:${a?'#1e3a2f':'var(--ink)'};font:inherit;font-size:12px;font-weight:800;cursor:pointer">${lbl}</button>`; };
+    html += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:14px 2px 4px;align-items:center"><span class="muted" style="font-size:12px;flex:none">حسب متابعة:</span>${whoChip("mine","أنا")}${whoChip("partner",esc(_cn.partner))}${whoChip("either","كلانا")}</div>`;
+    html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 2px 2px">${chip("all","الكل")}${chip("not_started","لم يتم البدء")}${chip("in_progress","جاري المشاهدة")}${chip("completed","تمت المشاهدة")}</div>`;
+    const matchF = (r)=>{ if(F==="all") return true; const p=r.prog||{}; const m=p.mine||"not_started", pa=p.partner||"not_started"; return who==="partner"? pa===F : who==="either"? (m===F||pa===F) : m===F; };
+    const q=(S.mtbQ||"").trim().toLowerCase();
+    const hit=(s)=>String(s||"").toLowerCase().includes(q);
+    const shown = items.filter(r=> matchF(r) && (!q || hit(r.title)||hit(r.speaker)) );
     // مجمّعة على المراحل الست؛ بلا مرحلة → "أخرى"
     const groups = STAGES.map(s=>({ n:s.n, title:s.title, theme:s.theme, items: shown.filter(r=> Number(r.stage)===s.n) }));
     const noStage = shown.filter(r=> r.stage==null || Number.isNaN(Number(r.stage)));
@@ -1059,8 +1064,11 @@
   function renderMutabaana(){
     S.view="mutabaana"; S.resourceId=null;
     el.innerHTML = pageTitle("متابعتنا","شوف إنت و"+coupleNames().partner+" وصلتوا لفين في كل مرحلة — والتحديثات بتظهر تلقائيًا كل شوية 🌿")
+      + `<div class="card" style="padding:10px 12px;margin-bottom:12px"><input id="mtbSearch" type="search" placeholder="دوّر على مادة بالاسم داخل المتابعة…" value="${esc(S.mtbQ||"")}"></div>`
       + `<div id="mtbBody"><div class="empty">…تحميل</div></div>`;
     _mtbSig = "";
+    const si=document.getElementById("mtbSearch");
+    if(si){ si.addEventListener("input",()=>{ S.mtbQ=si.value; if(_mtbItems) renderMutabaanaBody(_mtbItems); }); }
     loadMutabaana();
     _mtbPoll = setInterval(()=>{ if(S.view!=="mutabaana"){ clearInterval(_mtbPoll); _mtbPoll=null; return; } loadMutabaana(); }, 30000);
   }
@@ -2261,6 +2269,7 @@
       if(act==="mutabaana"){ S.view="mutabaana"; render(); return; }
       if(act==="setProgId"){ await api("PUT","/resources/"+node.dataset.res+"/progress",{ status:node.dataset.val }); _mtbSig=""; loadMutabaana(); return; }
       if(act==="mtbFilter"){ S.mtbFilter=node.dataset.f; renderMutabaanaBody(_mtbItems); return; }
+      if(act==="mtbWho"){ S.mtbWho=node.dataset.w; renderMutabaanaBody(_mtbItems); return; }
       if(act==="setPrio"){ await api("PUT","/resources/"+S.resourceId+"/priority",{ priority:node.dataset.val }); toast("اتحدّثت الأولوية"); renderResource(); return; }
       if(act==="setCat"){ await api("PUT","/resources/"+S.resourceId+"/category",{ category:node.dataset.val }); toast("اتحدّث التصنيف"); renderResource(); return; }
       if(act==="setPlaylist"){ S.playlist=node.dataset.pl; renderJourneys(); return; }

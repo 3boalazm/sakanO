@@ -460,7 +460,7 @@
 <header>
   <div class="bar">
     <button class="hamburger" data-dw="open" aria-label="القائمة">☰</button>
-    <div class="mark"><span class="brandlogo"></span><span class="brandword">سكن</span><span class="brandcal" id="brandName"></span><small>مساحتنا للتوافق</small></div>
+    <div class="mark"><span class="brandword">سكن</span><span class="brandcal" id="brandName"></span><small>مساحتنا للتوافق</small></div>
     <div class="bar-actions" id="barActions"></div>
   </div>
 </header>
@@ -729,6 +729,16 @@
   function renderFab(){
     const panel = document.getElementById("fabPanel"); if(!panel) return;
     const st = partnerStatus();
+    // لو اللوحة متبنية بالفعل، حدّث رأس المحادثة فقط (حالة الشريك)
+    // من غير ما تمسح الرسايل أو خانة الكتابة — ده اللي كان بيفضّي البوب-أب
+    const head = panel.querySelector(".fab-head");
+    if(head){
+      const dot = head.querySelector(".fab-dot");
+      if(dot){ dot.style.background = st.online?'#36c46f':'rgba(255,255,255,.4)'; dot.style.boxShadow = st.online?'0 0 6px #36c46f':'none'; }
+      const nm = head.querySelector(".fh-name"); if(nm) nm.textContent = st.name;
+      const sub = head.querySelector(".fh-sub"); if(sub) sub.textContent = st.txt;
+      return;
+    }
     panel.innerHTML = `<div class="fab-head">
         <span class="fab-dot" style="background:${st.online?'#36c46f':'rgba(255,255,255,.4)'};${st.online?'box-shadow:0 0 6px #36c46f':''}"></span>
         <div><div class="fh-name">${esc(st.name)}</div><div class="fh-sub">${esc(st.txt)}</div></div>
@@ -1075,7 +1085,10 @@
   function renderChat(){
     S.view="chat"; S.resourceId=null; S.chatReply=null; S.chatEdit=null; S.chatMenu=null;
     el.innerHTML = pageTitle("شاتنا","مساحة خاصة بينك وبين شريكك — زيّ الشات العادي، بتتحدّث تلقائيًا 🌿")
-      + `<div id="chatPresence" class="card tight" style="display:flex;align-items:center;font-size:13px;margin-bottom:10px;padding:8px 12px"></div>`
+      + `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <div id="chatPresence" class="card tight" style="flex:1;display:flex;align-items:center;font-size:13px;padding:8px 12px;margin:0"></div>
+          <button class="btn ghost sm" data-act="chatRefresh" title="تحديث المحادثة" aria-label="تحديث" style="flex:none;width:auto;padding:0 12px">🔄 تحديث</button>
+        </div>`
       + `<div class="card" style="padding:10px">
           <div id="chatScroll" style="height:min(58vh,460px);overflow-y:auto;padding:4px 6px"><div class="empty">…تحميل</div></div>
           <div id="chatComposer" style="margin-top:8px"></div>
@@ -1518,6 +1531,7 @@
         </p>
         <div class="actions" style="flex-wrap:wrap;gap:8px;margin-top:10px">
           <button class="btn sm" data-act="setupPin">${pinSet?"تغيير الكود":"إعداد كود PIN"}</button>
+          ${pinSet?`<button class="btn accent sm" data-act="lockNow">🔒 اقفل دلوقتي</button>`:""}
           ${pinSet?`<button class="btn ghost sm" data-act="clearPin">إزالة القفل</button>`:""}
         </div>
       </div>
@@ -2233,6 +2247,11 @@
         S.pinStep="setup1"; S.pinEntry=""; S.pinSetup1="";
         S.view="pinlock"; renderPinLock(); return;
       }
+      if(act==="lockNow"){
+        // اقفل التطبيق فورًا — يرجّع لشاشة إدخال الـ PIN
+        if(S.fabOpen) closeFab();
+        S.pinStep="lock"; S.pinEntry=""; S.view="pinlock"; render(); return;
+      }
       if(act==="quicknotes"){ S.view="quicknotes"; S.qnPanel="shared"; render(); return; }
       if(act==="qnPanel"){ S.qnPanel=node.dataset.p; renderQuickNotes(); return; }
       if(act==="qnAdd"){ qnDoAdd(node.dataset.scope||"shared"); return; }
@@ -2287,6 +2306,7 @@
       if(act==="chatEditStart"){ S.chatEdit=node.dataset.id; S.chatReply=null; S.chatMenu=null; renderChatMsgs(_chatMsgs,_chatPartnerRead,false); renderComposer(); return; }
       if(act==="chatDelete"){ S.chatMenu=null; await api("POST","/messages/"+node.dataset.id+"/delete"); _chatSig=""; await loadChat(); return; }
       if(act==="chatCancelCompose"){ S.chatReply=null; S.chatEdit=null; renderComposer(); return; }
+      if(act==="chatRefresh"){ _chatSig=""; await loadChat(); toast("اتحدّثت المحادثة ✓"); return; }
       if(act==="doDrawerSearch"){ const v=(document.getElementById("dwSearch")||{}).value||""; S.searchQ=v.trim(); S.view="search"; closeDrawer(); render(); return; }
       if(act==="search"){ S.view="search"; render(); return; }
 

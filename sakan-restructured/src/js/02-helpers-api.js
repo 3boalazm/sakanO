@@ -13,7 +13,7 @@
     if(!res.ok){
       const code = data && data.error ? data.error.code : ("HTTP_"+res.status);
       if((code==="UNAUTHENTICATED" || res.status===401) && S.token){
-        S.token=null; S.code=null; save(); S.view="onboarding"; render(); toast("انتهت الجلسة — سجّل دخولك تاني");
+        S.token=null; S.code=null; save(); closeFab(); S.view="onboarding"; render(); toast("انتهت الجلسة — سجّل دخولك تاني");
       }
       const e=new Error(code); e.code=code; e.data=data; throw e;
     }
@@ -55,6 +55,6 @@
     localStorage.removeItem("sakan_token"); localStorage.removeItem("sakan_code");
     localStorage.removeItem("sakan_name"); localStorage.removeItem(PIN_KEY); localStorage.removeItem(PIN_WHO);
     S.token=S.code=S.name=null; S.pinEntry=""; S.pinWho=null;
-    S.view="onboarding"; closeDrawer(); render();
+    S.view="onboarding"; closeDrawer(); closeFab(); render();
   }
 

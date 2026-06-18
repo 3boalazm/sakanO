@@ -22,45 +22,34 @@
   function jrnDest(e){
     const p = e.path || [];
     const r0 = p[0], r1 = p[1], r2 = p[2];
-    // أي حاجة على مورد بعينه → افتح صفحة المورد
-    if(r0 === 'resources' && r1 && !['full','progress','priority','category','notes','summary','questions'].includes(r1)){
-      return { act:'openq', rid:r1 };  // نفتح المورد مباشرة
-    }
-    if(r0 === 'resources' && r1 && r2){
-      return { act:'resource', rid:r1, tab: r2==='questions'?'discussion':'summary' };
-    }
+    // resources: أي event على مورد بعينه → افتح صفحة المورد في التاب المناسب
     if(r0 === 'resources' && r1){
-      return { act:'resource', rid:r1 };
+      if(r2 === 'questions') return { act:'resource', rid:r1, tab:'discussion' };
+      return { act:'resource', rid:r1, tab:'summary' };
     }
-    // أسئلة / مناقشات
-    if(r0 === 'questions'){
-      return { act:'nav', view:'discussions' };
-    }
+    // أسئلة / مناقشات مستقلة
+    if(r0 === 'questions')      return { act:'nav', view:'discussions' };
     // شات رئيسي
-    if(r0 === 'messages'){
-      return { act:'nav', view:'chat' };
-    }
+    if(r0 === 'messages')       return { act:'nav', view:'chat' };
     // قرارات
-    if(r0 === 'decisions'){
-      return { act:'nav', view:'decisionlog' };
-    }
+    if(r0 === 'decisions')      return { act:'nav', view:'decisionlog' };
     // مهام
-    if(r0 === 'tasks'){
-      return { act:'nav', view:'tasks' };
-    }
+    if(r0 === 'tasks')          return { act:'nav', view:'tasks' };
     // ميزانية
-    if(r0 === 'budget'){
-      return { act:'nav', view:'budget' };
-    }
+    if(r0 === 'budget')         return { act:'nav', view:'budget' };
     // مشتريات
-    if(r0 === 'shopping'){
-      return { act:'nav', view:'shopping' };
-    }
-    // الاتصال (أمنيات / امتنان / كبسولات / مفاتيح / مزاج / صندوق تفاهم / ميثاق)
+    if(r0 === 'shopping')       return { act:'nav', view:'shopping' };
+    // focus → صفحة المورد لو موجود
+    if(r0 === 'focus' && e.resourceId) return { act:'resource', rid:e.resourceId, tab:'summary' };
+    // صندوق الاتصال (أمنيات / امتنان / كبسولات / مفاتيح / مزاج / صندوق تفاهم / ميثاق)
     if(['wishes','gratitude','capsules','keys','mood','safespace','charter'].includes(r0)){
       return { act:'nav', view:'connect' };
     }
-    return null; // مفيش تنقل (حذف / seed / غيره)
+    // مفكّرة / ملاحظات
+    if(r0 === 'quicknotes')     return { act:'nav', view:'quicknotes' };
+    // الإعدادات
+    if(r0 === 'settings')       return { act:'nav', view:'settings' };
+    return null; // مفيش تنقل (حذف / seed / presence / موضوع غير قابل للتنقل)
   }
 
   // ── Icon & label per action (method + path) ──

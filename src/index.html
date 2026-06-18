@@ -2643,6 +2643,16 @@
     if(th){ applyTheme(th.dataset.setTheme); return; }
     const a = ev.target.closest("[data-act]");
     if(a){ ev.preventDefault(); if(a.closest("#drawer")) closeDrawer(); return go(a.dataset.act, a); }
+    // كليك على عنصر رحلة (data-jdest)
+    const jItem = ev.target.closest("[data-jdest]");
+    if(jItem && jItem.dataset.jdest){
+      try{
+        const d = JSON.parse(jItem.dataset.jdest);
+        if(d.act==="resource"){ S.resourceId=d.rid; S.tab=d.tab||"summary"; render(); return; }
+        if(d.act==="nav"){ S.view=d.view; render(); return; }
+      }catch(_){}
+      return;
+    }
     const t = ev.target.closest("[data-tab]");
     if(t){ S.tab=t.dataset.tab; renderResource(); return; }
     const open = ev.target.closest("[data-open]");

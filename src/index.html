@@ -388,13 +388,10 @@
   }
   .jrn-day-label::after{ content:''; flex:1; height:1px; background:var(--line); }
   .jrn-group{ display:flex; flex-direction:column; gap:8px; margin-bottom:6px; }
-  .jrn-item{
-    display:flex; gap:12px; align-items:flex-start;
-    padding:12px 14px; border-radius:16px;
-    background:var(--surface); border:1px solid var(--line);
-    box-shadow:var(--shadow-sm); transition:transform .12s;
-  }
-  .jrn-item:hover{ transform:translateY(-1px); }
+
+  .jrn-item{ background:var(--card); border-radius:10px; padding:10px 12px; display:flex; align-items:flex-start; gap:10px; transition:transform .15s, box-shadow .15s; }
+  .jrn-item[data-jdest]:hover{ transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.18); }
+  .jrn-item[data-jdest]:active{ transform:translateY(0); }
   .jrn-item.mine{ border-right:3px solid var(--primary); }
   .jrn-item.partner{ border-right:3px solid var(--accent); }
   .jrn-ico{ font-size:20px; flex:none; margin-top:1px; }
@@ -402,6 +399,7 @@
   .jrn-who{ font-size:13px; font-weight:800; flex:none; }
   .jrn-txt{ font-size:14px; color:var(--ink); flex:1; min-width:0; }
   .jrn-time{ font-size:11.5px; color:var(--muted-2); flex:none; margin-inline-start:auto; }
+  .jrn-arrow{ font-size:18px; color:var(--muted-2); flex:none; margin-inline-start:4px; line-height:1; }
 /* ===== جرس الإشعارات + الشات العائم (ماسنجر) ===== */
 
 /* مهم: السمة [hidden] لازم تتغلّب على display:flex بتاع اللوحات،
@@ -2001,6 +1999,51 @@
     renderJourneyPanel();
   }
 
+  // ── Destination: أين يروح الكليك لكل حدث ──
+  function jrnDest(e){
+    const p = e.path || [];
+    const r0 = p[0], r1 = p[1], r2 = p[2];
+    // أي حاجة على مورد بعينه → افتح صفحة المورد
+    if(r0 === 'resources' && r1 && !['full','progress','priority','category','notes','summary','questions'].includes(r1)){
+      return { act:'openq', rid:r1 };  // نفتح المورد مباشرة
+    }
+    if(r0 === 'resources' && r1 && r2){
+      return { act:'resource', rid:r1, tab: r2==='questions'?'discussion':'summary' };
+    }
+    if(r0 === 'resources' && r1){
+      return { act:'resource', rid:r1 };
+    }
+    // أسئلة / مناقشات
+    if(r0 === 'questions'){
+      return { act:'nav', view:'discussions' };
+    }
+    // شات رئيسي
+    if(r0 === 'messages'){
+      return { act:'nav', view:'chat' };
+    }
+    // قرارات
+    if(r0 === 'decisions'){
+      return { act:'nav', view:'decisionlog' };
+    }
+    // مهام
+    if(r0 === 'tasks'){
+      return { act:'nav', view:'tasks' };
+    }
+    // ميزانية
+    if(r0 === 'budget'){
+      return { act:'nav', view:'budget' };
+    }
+    // مشتريات
+    if(r0 === 'shopping'){
+      return { act:'nav', view:'shopping' };
+    }
+    // الاتصال (أمنيات / امتنان / كبسولات / مفاتيح / مزاج / صندوق تفاهم / ميثاق)
+    if(['wishes','gratitude','capsules','keys','mood','safespace','charter'].includes(r0)){
+      return { act:'nav', view:'connect' };
+    }
+    return null; // مفيش تنقل (حذف / seed / غيره)
+  }
+
   // ── Icon & label per action (method + path) ──
   function jrnIcon(e){
     const p = e.path || []; const t = e.title ? ` · ${e.title}` : "";
@@ -2061,16 +2104,20 @@
         lastDay = day;
       }
       const {ico,txt} = jrnIcon(e);
+      const dest = jrnDest(e);
       const who    = mineSel ? "أنا" : "شريكي";
       const whoClr = mineSel ? "var(--primary)" : "var(--accent)";
       const time   = new Date(e.createdAt).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});
+      const destAttr = dest ? `data-jdest='${JSON.stringify(dest)}'` : '';
+      const cursor   = dest ? 'cursor:pointer;' : '';
       html += `
-        <div class="jrn-item ${mineSel?'mine':'partner'}">
+        <div class="jrn-item ${mineSel?'mine':'partner'}" ${destAttr} style="${cursor}">
           <div class="jrn-ico">${ico}</div>
           <div class="jrn-body">
             <span class="jrn-who" style="color:${whoClr}">${who}</span>
             <span class="jrn-txt">${esc(txt)}</span>
             <span class="jrn-time">${time}</span>
+            ${dest?'<span class="jrn-arrow">›</span>':''}
           </div>
         </div>`;
     });
@@ -2406,6 +2453,24 @@
       if(act==="connect"){ S.view="connect"; render(); return; }
       if(act==="myjourney"){ S.view="myjourney"; render(); return; }
       if(act==="jrnWho"){ S.jrnWho=node.dataset.w; const sw=document.getElementById("jrnWho"); if(sw)[...sw.children].forEach(x=>x.classList.toggle("on",x===node)); renderJourneyPanel(); return; }
+      // كليك على عنصر رحلة → روح مكانه
+      const jItem = node.closest('[data-jdest]');
+      if(jItem && jItem.dataset.jdest){
+        try{
+          const d = JSON.parse(jItem.dataset.jdest);
+          if(d.act==='resource'){ S.resourceId=d.rid; S.tab=d.tab||'summary'; render(); return; }
+          if(d.act==='nav'){
+            if(d.view==='chat'){ S.view='chat'; render(); return; }
+            if(d.view==='discussions'){ S.view='discussions'; render(); return; }
+            if(d.view==='decisionlog'){ S.view='decisionlog'; render(); return; }
+            if(d.view==='tasks'){ S.view='tasks'; render(); return; }
+            if(d.view==='budget'){ S.view='budget'; render(); return; }
+            if(d.view==='shopping'){ S.view='shopping'; render(); return; }
+            if(d.view==='connect'){ S.view='connect'; render(); return; }
+          }
+        }catch(_){}
+        return;
+      }
 
       // ---- PIN Lock actions ----
       if(act==="pinKey"){ pinHandleKey(node.dataset.k); return; }

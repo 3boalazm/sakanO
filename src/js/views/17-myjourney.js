@@ -18,6 +18,51 @@
     renderJourneyPanel();
   }
 
+  // ── Destination: أين يروح الكليك لكل حدث ──
+  function jrnDest(e){
+    const p = e.path || [];
+    const r0 = p[0], r1 = p[1], r2 = p[2];
+    // أي حاجة على مورد بعينه → افتح صفحة المورد
+    if(r0 === 'resources' && r1 && !['full','progress','priority','category','notes','summary','questions'].includes(r1)){
+      return { act:'openq', rid:r1 };  // نفتح المورد مباشرة
+    }
+    if(r0 === 'resources' && r1 && r2){
+      return { act:'resource', rid:r1, tab: r2==='questions'?'discussion':'summary' };
+    }
+    if(r0 === 'resources' && r1){
+      return { act:'resource', rid:r1 };
+    }
+    // أسئلة / مناقشات
+    if(r0 === 'questions'){
+      return { act:'nav', view:'discussions' };
+    }
+    // شات رئيسي
+    if(r0 === 'messages'){
+      return { act:'nav', view:'chat' };
+    }
+    // قرارات
+    if(r0 === 'decisions'){
+      return { act:'nav', view:'decisionlog' };
+    }
+    // مهام
+    if(r0 === 'tasks'){
+      return { act:'nav', view:'tasks' };
+    }
+    // ميزانية
+    if(r0 === 'budget'){
+      return { act:'nav', view:'budget' };
+    }
+    // مشتريات
+    if(r0 === 'shopping'){
+      return { act:'nav', view:'shopping' };
+    }
+    // الاتصال (أمنيات / امتنان / كبسولات / مفاتيح / مزاج / صندوق تفاهم / ميثاق)
+    if(['wishes','gratitude','capsules','keys','mood','safespace','charter'].includes(r0)){
+      return { act:'nav', view:'connect' };
+    }
+    return null; // مفيش تنقل (حذف / seed / غيره)
+  }
+
   // ── Icon & label per action (method + path) ──
   function jrnIcon(e){
     const p = e.path || []; const t = e.title ? ` · ${e.title}` : "";
@@ -78,16 +123,20 @@
         lastDay = day;
       }
       const {ico,txt} = jrnIcon(e);
+      const dest = jrnDest(e);
       const who    = mineSel ? "أنا" : "شريكي";
       const whoClr = mineSel ? "var(--primary)" : "var(--accent)";
       const time   = new Date(e.createdAt).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});
+      const destAttr = dest ? `data-jdest='${JSON.stringify(dest)}'` : '';
+      const cursor   = dest ? 'cursor:pointer;' : '';
       html += `
-        <div class="jrn-item ${mineSel?'mine':'partner'}">
+        <div class="jrn-item ${mineSel?'mine':'partner'}" ${destAttr} style="${cursor}">
           <div class="jrn-ico">${ico}</div>
           <div class="jrn-body">
             <span class="jrn-who" style="color:${whoClr}">${who}</span>
             <span class="jrn-txt">${esc(txt)}</span>
             <span class="jrn-time">${time}</span>
+            ${dest?'<span class="jrn-arrow">›</span>':''}
           </div>
         </div>`;
     });

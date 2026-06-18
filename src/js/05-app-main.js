@@ -123,6 +123,24 @@
       if(act==="connect"){ S.view="connect"; render(); return; }
       if(act==="myjourney"){ S.view="myjourney"; render(); return; }
       if(act==="jrnWho"){ S.jrnWho=node.dataset.w; const sw=document.getElementById("jrnWho"); if(sw)[...sw.children].forEach(x=>x.classList.toggle("on",x===node)); renderJourneyPanel(); return; }
+      // كليك على عنصر رحلة → روح مكانه
+      const jItem = node.closest('[data-jdest]');
+      if(jItem && jItem.dataset.jdest){
+        try{
+          const d = JSON.parse(jItem.dataset.jdest);
+          if(d.act==='resource'){ S.resourceId=d.rid; S.tab=d.tab||'summary'; render(); return; }
+          if(d.act==='nav'){
+            if(d.view==='chat'){ S.view='chat'; render(); return; }
+            if(d.view==='discussions'){ S.view='discussions'; render(); return; }
+            if(d.view==='decisionlog'){ S.view='decisionlog'; render(); return; }
+            if(d.view==='tasks'){ S.view='tasks'; render(); return; }
+            if(d.view==='budget'){ S.view='budget'; render(); return; }
+            if(d.view==='shopping'){ S.view='shopping'; render(); return; }
+            if(d.view==='connect'){ S.view='connect'; render(); return; }
+          }
+        }catch(_){}
+        return;
+      }
 
       // ---- PIN Lock actions ----
       if(act==="pinKey"){ pinHandleKey(node.dataset.k); return; }

@@ -329,6 +329,46 @@ html[dir="rtl"] .rm-menu{transform:translateX(-100%)}
   .rm-menu{width:100%}
 }
 
+/* Mini-map maximize button */
+.w-mini{overflow:visible}
+.w-mini .max-btn{position:absolute;top:-8px;inset-inline-end:-8px;width:26px;height:26px;
+  border-radius:50%;border:1px solid rgba(255,255,255,.15);background:rgba(200,112,60,.95);color:#1a1109;
+  font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(0,0,0,.35);transition:.15s;padding:0;line-height:1}
+.w-mini .max-btn:hover{transform:scale(1.1)}
+.w-mini .max-btn:active{transform:scale(.95)}
+
+/* Full-screen plan modal */
+.map-modal{position:absolute;inset:0;z-index:12;background:rgba(7,9,13,.94);backdrop-filter:blur(12px);
+  display:none;flex-direction:column;padding:16px}
+.map-modal.on{display:flex;animation:mmFade .3s ease-out}
+@keyframes mmFade{from{opacity:0}to{opacity:1}}
+.map-modal header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex:0 0 auto}
+.map-modal header b{font-size:16px;font-weight:800;color:#fff}
+.map-modal header span{font-size:12px;color:var(--mut);font-family:"Space Mono",monospace;direction:ltr;display:block;margin-top:3px}
+.map-modal .close{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);
+  border-radius:50%;width:38px;height:38px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.map-modal .close:hover{background:var(--accent);color:#1a1109}
+.map-modal .body{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;padding:6px}
+.map-modal .body svg{max-width:100%;max-height:100%;width:auto;height:auto;filter:drop-shadow(0 10px 30px rgba(0,0,0,.4))}
+.map-modal .body .mrm{cursor:pointer;transition:.15s}
+.map-modal .body .mrm:hover{filter:brightness(1.2)}
+.map-modal .rlabel{font-family:"Tajawal";font-weight:700;fill:#fff;pointer-events:none;font-size:14px}
+.map-modal .rlabel.dim{fill:#8a92a0}
+.map-modal .rcount{font-family:"Space Mono",monospace;fill:#c9b992;pointer-events:none;font-size:11px}
+.map-modal .youdot{filter:drop-shadow(0 0 8px rgba(200,112,60,1))}
+.map-modal .youdot circle.outer{animation:pulseDot 1.8s ease-in-out infinite}
+.map-modal footer{flex:0 0 auto;padding-top:10px;text-align:center;color:var(--mut);font-size:12px;line-height:1.6}
+
+@media(max-width:640px){
+  .w-mini .max-btn{width:24px;height:24px;font-size:11px;top:-6px;inset-inline-end:-6px}
+  .map-modal{padding:12px}
+  .map-modal header b{font-size:14px}
+  .map-modal .close{width:34px;height:34px;font-size:18px}
+  .map-modal .rlabel{font-size:12px}
+  .map-modal .rcount{font-size:10px}
+}
+
 /* Sakan-branding override — respect selected theme */
 :root{
   --ink:#0e3b2e; --ink2:#122e26; --panel:#1a5d47; --panel2:#245f4a;
@@ -424,6 +464,14 @@ html[data-theme="light"] .gest-hint{background:rgba(14,59,46,.9);color:#faf6ec}
           <button class="menu-btn" id="wMenu">☰ الأوض</button>
           <div class="doors" id="wDoors"></div>
         </div>
+      </div>
+      <div class="map-modal" id="mapModal">
+        <header>
+          <div><b>مخطط الشقة</b><span id="mmSub"></span></div>
+          <button class="close" id="mmClose" aria-label="إغلاق">×</button>
+        </header>
+        <div class="body" id="mmBody"></div>
+        <footer>دوس على أي أوضة عشان تنتقل ليها</footer>
       </div>
       <div class="rm-scrim" id="rmScrim"></div>
       <aside class="rm-menu" id="rmMenu">
@@ -813,6 +861,65 @@ function goNode(id){
 }
 
 /* -------- الخريطة المصغّرة (تفاعلية) -------- */
+function drawFullMap(){
+  var b=planBounds();
+  var body=document.getElementById("mmBody");
+  /* size to available viewport, keep aspect */
+  var stage=body.getBoundingClientRect();
+  var maxW=Math.max(300, stage.width||window.innerWidth-32);
+  var maxH=Math.max(280, stage.height||window.innerHeight-160);
+  var sc=Math.min(maxW/b.w, maxH/b.h) * 0.92;
+  var W=b.w*sc, H=b.h*sc;
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'">';
+  ROOMS.forEach(function(r){
+    var x=(r.x-b.minx)*sc, y=(r.y-b.miny)*sc, w=r.w*sc, h=r.h*sc;
+    var on=curNode.rooms.indexOf(r.id)>=0;
+    var node=nodeOfRoom(r.id);
+    var clickable=!!node;
+    var col=on?TYPE_COLOR[r.type]:(clickable?TYPE_COLOR[r.type]:"#3a3f4a");
+    var op=on?1:(clickable?0.65:0.35);
+    svg+='<g class="mrm" data-id="'+r.id+'">';
+    svg+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="3" fill="'+col+'" opacity="'+op+'" stroke="#0c0f14" stroke-width="1.5"/>';
+    /* Room label + photo count for reachable rooms */
+    if(w>50 && h>34){
+      var cx=x+w/2, cy=y+h/2;
+      svg+='<text class="rlabel'+(clickable?'':' dim')+'" x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle">'+r.ar+'</text>';
+      if(node && node.photos.length){
+        svg+='<text class="rcount" x="'+cx+'" y="'+(cy+14)+'" text-anchor="middle">'+node.photos.length+' photos</text>';
+      }
+    }
+    if(r.col){ svg+='<rect x="'+(x+w/2-5)+'" y="'+(y+h/2-5)+'" width="10" height="10" fill="#1a1a1a" opacity="0.6"/>'; }
+    svg+='</g>';
+  });
+  /* You-are-here dot */
+  var dx=(curNode.cx-b.minx)*sc, dy=(curNode.cy-b.miny)*sc;
+  svg+='<g class="youdot" transform="translate('+dx.toFixed(1)+','+dy.toFixed(1)+')">'
+     + '<circle class="outer" cx="0" cy="0" r="10" fill="var(--accent)" opacity=".4"/>'
+     + '<circle cx="0" cy="0" r="5" fill="var(--accent)"/></g>';
+  svg+='</svg>';
+  body.innerHTML=svg;
+  body.querySelectorAll(".mrm").forEach(function(el){
+    el.addEventListener("click",function(){
+      var n=nodeOfRoom(el.dataset.id);
+      if(n){ closeFullMap(); goNode(n.id); }
+    });
+  });
+  document.getElementById("mmSub").textContent="انت في: "+curNode.ar;
+}
+function openFullMap(){
+  var m=document.getElementById("mapModal");
+  m.classList.add("on");
+  /* render after layout so getBoundingClientRect is correct */
+  requestAnimationFrame(drawFullMap);
+}
+function closeFullMap(){
+  document.getElementById("mapModal").classList.remove("on");
+}
+document.getElementById("mmClose").onclick=closeFullMap;
+document.getElementById("mapModal").addEventListener("click",function(e){
+  if(e.target===this) closeFullMap();
+});
+
 function drawMiniW(){
   var b=planBounds(),sc=120/Math.max(b.w,b.h);
   var W=b.w*sc,H=b.h*sc,svg='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">';
@@ -829,7 +936,8 @@ function drawMiniW(){
      + '<circle class="outer" cx="0" cy="0" r="7" fill="var(--accent)" opacity=".35"/>'
      + '<circle cx="0" cy="0" r="3.5" fill="var(--accent)"/></g>';
   svg+='</svg>';
-  wMini.innerHTML=svg;
+  wMini.innerHTML='<button class="max-btn" id="wMaxBtn" title="كبّر" aria-label="كبّر المخطط">⤢</button>'+svg;
+  document.getElementById("wMaxBtn").onclick=function(e){e.stopPropagation();openFullMap();};
   wMini.querySelectorAll(".mrm").forEach(function(el){
     el.addEventListener("click",function(){
       var n=nodeOfRoom(el.dataset.id); if(n)goNode(n.id);
@@ -1216,7 +1324,7 @@ function init3D(){
 /* keyboard */
 addEventListener('keydown',function(e){
   if(lb.classList.contains('on')){ if(e.key==='ArrowLeft')lbStep(-1); if(e.key==='ArrowRight')lbStep(1); if(e.key==='Escape')lb.classList.remove('on'); return;}
-  if(e.key==='Escape'){document.getElementById('ded').classList.remove('on');return;}
+  if(e.key==='Escape'){var mm=document.getElementById('mapModal');if(mm&&mm.classList.contains('on')){closeFullMap();return;}document.getElementById('ded').classList.remove('on');return;}
   if(document.getElementById('walk').classList.contains('on')){
     if(e.key==='ArrowRight')goPhoto(curIdx-1<0?curNode.photos.length-1:curIdx-1);
     if(e.key==='ArrowLeft')goPhoto((curIdx+1)%curNode.photos.length);

@@ -1,5 +1,6 @@
 import { handle } from '../lib/handler.js';
 import { PAGE } from '../lib/page.js';
+import { APARTMENT_TOUR } from '../lib/apartment.js';
 
 // PWA static assets embedded as base64
 const ASSETS = {
@@ -37,6 +38,13 @@ export default async function handler(req, res) {
     res.setHeader('content-type', ct);
     res.setHeader('cache-control', cc);
     res.status(200).send(buf);
+    return;
+  }
+
+  // Serve apartment tour static page
+  if (req.method === 'GET' && pathname === '/apartment-tour-v6.html') {
+    res.setHeader('content-type', 'text/html; charset=utf-8');
+    res.status(200).send(APARTMENT_TOUR);
     return;
   }
 

@@ -1,0 +1,19 @@
+/* ========== رحلتي ========== */
+  .jrn-day-label{
+    font-size:12px; font-weight:800; letter-spacing:1.5px;
+    color:var(--accent-ink); padding:20px 0 8px; display:flex; align-items:center; gap:8px;
+  }
+  .jrn-day-label::after{ content:''; flex:1; height:1px; background:var(--line); }
+  .jrn-group{ display:flex; flex-direction:column; gap:8px; margin-bottom:6px; }
+
+  .jrn-item{ background:var(--card); border-radius:10px; padding:10px 12px; display:flex; align-items:flex-start; gap:10px; transition:transform .15s, box-shadow .15s; }
+  .jrn-item[data-jdest]:hover{ transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.18); }
+  .jrn-item[data-jdest]:active{ transform:translateY(0); }
+  .jrn-item.mine{ border-right:3px solid var(--primary); }
+  .jrn-item.partner{ border-right:3px solid var(--accent); }
+  .jrn-ico{ font-size:20px; flex:none; margin-top:1px; }
+  .jrn-body{ flex:1; min-width:0; display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; }
+  .jrn-who{ font-size:13px; font-weight:800; flex:none; }
+  .jrn-txt{ font-size:14px; color:var(--ink); flex:1; min-width:0; }
+  .jrn-time{ font-size:11.5px; color:var(--muted-2); flex:none; margin-inline-start:auto; }
+  .jrn-arrow{ font-size:18px; color:var(--muted-2); flex:none; margin-inline-start:4px; line-height:1; }

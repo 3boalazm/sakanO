@@ -2,955 +2,1128 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الجناح الملكي - تفاصيل الغرفة</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        bg: '#0C0C0C',
-                        elevated: '#161616',
-                        card: '#1C1C1C',
-                        border: '#2A2A2A',
-                        fg: '#F0EBE3',
-                        muted: '#7A7A7A',
-                        accent: '#C8956C',
-                        'accent-h': '#D9A87F',
-                        sage: '#5B8A5E',
-                    },
-                    fontFamily: { cairo: ['Cairo', 'sans-serif'] }
-                }
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>شقتنا — جولة تفاعلية v7</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --bg: #1a1a1a;
+            --card: #2d2d2d;
+            --text: #ecf0f1;
+            --text-dim: #95a5a6;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+            user-select: none;
+        }
+        
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(44, 62, 80, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .tab-btn {
+            padding: 8px 16px;
+            background: var(--card);
+            border: none;
+            border-radius: 20px;
+            color: var(--text);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn.active {
+            background: var(--accent);
+        }
+        
+        .tab-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .compass {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(44, 62, 80, 0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .compass-icon {
+            font-size: 20px;
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .room-progress {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background: rgba(44, 62, 80, 0.9);
+            padding: 12px;
+            border-radius: 12px;
+            z-index: 999;
+            max-width: 200px;
+        }
+        
+        .progress-title {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+        
+        .progress-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        
+        .progress-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+        
+        .progress-dot.visited {
+            background: var(--success);
+        }
+        
+        .walk-mode {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: none;
+        }
+        
+        .walk-mode.active {
+            display: block;
+        }
+        
+        .panorama-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+        }
+        
+        .panorama-container:active {
+            cursor: grabbing;
+        }
+        
+        .panorama-image {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+            transform-origin: center center;
+        }
+        
+        .hotspot {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(52, 152, 219, 0.8);
+            border: 3px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s;
+            animation: pulse 2s infinite;
+            z-index: 10;
+        }
+        
+        .hotspot:hover {
+            transform: scale(1.2);
+            background: rgba(52, 152, 219, 1);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7); }
+            50% { box-shadow: 0 0 0 15px rgba(52, 152, 219, 0); }
+        }
+        
+        .hotspot-tooltip {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        
+        .hotspot:hover .hotspot-tooltip {
+            opacity: 1;
+        }
+        
+        .room-info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(44, 62, 80, 0.95);
+            padding: 16px;
+            border-radius: 12px;
+            z-index: 999;
+            min-width: 250px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .room-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+        
+        .room-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .room-detail {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .room-detail-icon {
+            font-size: 18px;
+        }
+        
+        .nav-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 999;
+        }
+        
+        .nav-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(44, 62, 80, 0.9);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        
+        .nav-btn:hover {
+            background: var(--accent);
+            transform: scale(1.1);
+        }
+        
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .mini-map {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(44, 62, 80, 0.9);
+            border-radius: 12px;
+            z-index: 999;
+            padding: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .mini-map-title {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        
+        .mini-map-svg {
+            width: 100%;
+            height: calc(100% - 20px);
+        }
+        
+        .mini-map-room {
+            fill: var(--card);
+            stroke: var(--text-dim);
+            stroke-width: 1;
+            transition: all 0.3s;
+        }
+        
+        .mini-map-room.current {
+            fill: var(--accent);
+            stroke: white;
+            stroke-width: 2;
+        }
+        
+        .mini-map-marker {
+            fill: var(--warning);
+            animation: markerPulse 1.5s infinite;
+        }
+        
+        @keyframes markerPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .plan-view {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 60px);
+            background: var(--bg);
+            display: none;
+            padding: 20px;
+            overflow: auto;
+        }
+        
+        .plan-view.active {
+            display: block;
+        }
+        
+        .plan-svg {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            display: block;
+        }
+        
+        .plan-room {
+            fill: var(--card);
+            stroke: var(--text-dim);
+            stroke-width: 2;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .plan-room:hover {
+            fill: var(--accent);
+            stroke: white;
+            stroke-width: 3;
+        }
+        
+        .plan-room-label {
+            fill: var(--text);
+            font-size: 14px;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        
+        .three-view {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 60px);
+            background: var(--bg);
+            display: none;
+        }
+        
+        .three-view.active {
+            display: block;
+        }
+        
+        #three-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .dollhouse-btn {
+            position: fixed;
+            top: 70px;
+            left: 20px;
+            background: rgba(44, 62, 80, 0.9);
+            padding: 10px 16px;
+            border-radius: 20px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .dollhouse-btn:hover {
+            background: var(--accent);
+            transform: translateY(-2px);
+        }
+        
+        .fullscreen-btn {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background: rgba(44, 62, 80, 0.9);
+            padding: 10px;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 999;
+            transition: all 0.3s;
+        }
+        
+        .fullscreen-btn:hover {
+            background: var(--accent);
+            transform: scale(1.1);
+        }
+        
+        .auto-tour-btn {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--success);
+            padding: 12px 24px;
+            border-radius: 25px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .auto-tour-btn:hover {
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.5s;
+        }
+        
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+        
+        .loading-bar {
+            width: 300px;
+            height: 8px;
+            background: var(--card);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .loading-progress {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .loading-text {
+            margin-top: 12px;
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+        
+        .transition-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+        
+        .transition-overlay.active {
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .room-progress {
+                display: none;
+            }
+            
+            .room-info {
+                bottom: 80px;
+                right: 10px;
+                left: 10px;
+                min-width: auto;
+            }
+            
+            .mini-map {
+                width: 120px;
+                height: 120px;
+                bottom: 80px;
+            }
+            
+            .nav-controls {
+                bottom: 10px;
+            }
+            
+            .nav-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
             }
         }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-        }
-    }
-    </script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Cairo', sans-serif; background: #0C0C0C; color: #F0EBE3; }
-
-        /* حاوية الزوم */
-        .zoom-container {
-            position: relative; overflow: hidden; cursor: zoom-in;
-            border-radius: 16px; aspect-ratio: 16/10; background: #111;
-        }
-        .zoom-img {
-            width: 100%; height: 100%; object-fit: contain;
-            transform-origin: center center; user-select: none; -webkit-user-drag: none;
-        }
-
-        /* أزرار الزوم */
-        .zoom-controls {
-            position: absolute; bottom: 16px; left: 16px;
-            display: flex; gap: 6px; z-index: 10;
-        }
-        .zoom-btn {
-            width: 40px; height: 40px; border-radius: 10px;
-            background: rgba(0,0,0,0.75); backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.08); color: #F0EBE3;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: all 0.25s; font-size: 14px;
-        }
-        .zoom-btn:hover { background: rgba(200,149,108,0.7); color: #0C0C0C; }
-
-        /* مؤشر نسبة الزوم */
-        .zoom-level {
-            position: absolute; top: 16px; left: 16px;
-            background: rgba(0,0,0,0.75); backdrop-filter: blur(10px);
-            border: 1px solid rgba(200,149,108,0.3); border-radius: 10px;
-            padding: 6px 14px; font-size: 13px; font-weight: 600;
-            color: #C8956C; opacity: 0; transition: opacity 0.3s; z-index: 10;
-        }
-        .zoom-level.visible { opacity: 1; }
-
-        /* الصور المصغرة */
-        .thumb {
-            width: 84px; height: 58px; border-radius: 10px; overflow: hidden;
-            cursor: pointer; border: 2px solid transparent; transition: all 0.3s; flex-shrink: 0;
-        }
-        .thumb.active { border-color: #C8956C; box-shadow: 0 0 12px rgba(200,149,108,0.3); }
-        .thumb:hover:not(.active) { border-color: #555; }
-        .thumb img { width: 100%; height: 100%; object-fit: cover; }
-
-        /* حاوية الـ 3D */
-        #room3d-container {
-            width: 100%; aspect-ratio: 16/10; border-radius: 16px;
-            overflow: hidden; position: relative; background: #F5EDE0;
-        }
-        #room3d-container canvas { display: block; width: 100% !important; height: 100% !important; }
-
-        /* أزرار التحكم بالغرفة 3D */
-        .room3d-btn {
-            padding: 8px 14px; border-radius: 10px; background: #1C1C1C;
-            border: 1px solid #2A2A2A; color: #F0EBE3; cursor: pointer;
-            font-family: 'Cairo', sans-serif; font-size: 13px;
-            transition: all 0.25s; display: flex; align-items: center; gap: 6px;
-        }
-        .room3d-btn:hover { border-color: #C8956C; color: #C8956C; }
-        .room3d-btn.active { background: #C8956C; color: #0C0C0C; border-color: #C8956C; font-weight: 600; }
-
-        /* معلومات النقطة التفاعلية */
-        .hotspot-info {
-            position: absolute; bottom: 16px; right: 16px;
-            background: rgba(12,12,12,0.92); backdrop-filter: blur(16px);
-            border: 1px solid rgba(200,149,108,0.25); border-radius: 14px;
-            padding: 18px; max-width: 280px; opacity: 0;
-            transform: translateY(10px); transition: all 0.4s;
-            pointer-events: none; z-index: 10;
-        }
-        .hotspot-info.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
-
-        /* بطاقات المقترحات */
-        .sug-card {
-            background: #1C1C1C; border: 1px solid #2A2A2A;
-            border-radius: 14px; padding: 24px; transition: all 0.35s; position: relative;
-        }
-        .sug-card:hover { border-color: #C8956C; transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
-        .sug-card.done { border-color: #5B8A5E; }
-        .sug-badge {
-            position: absolute; top: 12px; left: 12px;
-            background: #5B8A5E; color: white; font-size: 11px; font-weight: 600;
-            padding: 3px 12px; border-radius: 20px;
-        }
-        .sug-badge.plan { background: #2A2A2A; color: #7A7A7A; }
-
-        /* التوست */
-        .toast {
-            position: fixed; bottom: 28px; left: 50%;
-            transform: translateX(-50%) translateY(120px);
-            background: #1C1C1C; border: 1px solid #C8956C;
-            color: #F0EBE3; padding: 14px 28px; border-radius: 14px;
-            font-family: 'Cairo', sans-serif; font-size: 14px; z-index: 9999;
-            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            display: flex; align-items: center; gap: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-        }
-        .toast.show { transform: translateX(-50%) translateY(0); }
-
-        /* شريط التمرير */
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #C8956C; }
-
-        /* حركات الظهور */
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
-        .anim { animation: fadeUp 0.6s ease-out forwards; }
-        .d1 { animation-delay: 0.1s; opacity: 0; }
-        .d2 { animation-delay: 0.2s; opacity: 0; }
-        .d3 { animation-delay: 0.3s; opacity: 0; }
-        .d4 { animation-delay: 0.4s; opacity: 0; }
-
-        /* توهج خلفي */
-        .glow {
-            position: fixed; border-radius: 50%; filter: blur(160px);
-            opacity: 0.035; pointer-events: none; z-index: 0;
-        }
-
-        input[type="date"] { color-scheme: dark; }
     </style>
 </head>
-<body class="font-cairo min-h-screen">
-    <!-- توهجات خلفية -->
-    <div class="glow" style="background:#C8956C;width:700px;height:700px;top:-300px;right:-250px;"></div>
-    <div class="glow" style="background:#5B8A5E;width:500px;height:500px;bottom:-200px;left:-200px;"></div>
-
-    <!-- شريط التنقل -->
-    <nav class="sticky top-0 z-50 bg-bg/80 backdrop-blur-2xl border-b border-border">
-        <div class="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-accent flex items-center justify-center">
-                    <i class="fas fa-crown text-bg text-sm"></i>
-                </div>
-                <span class="text-lg font-bold tracking-wide">لاكجري</span>
-            </div>
-            <div class="hidden md:flex items-center gap-8 text-sm text-muted">
-                <a href="#" class="hover:text-accent transition-colors">الغرف</a>
-                <a href="#" class="hover:text-accent transition-colors">الخدمات</a>
-                <a href="#" class="hover:text-accent transition-colors">الموقع</a>
-                <a href="#" class="hover:text-accent transition-colors">تواصل</a>
-            </div>
-            <button class="px-6 py-2.5 bg-accent text-bg rounded-xl text-sm font-bold hover:bg-accent-h transition-colors">
-                احجز الآن
-            </button>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-title">جاري تحميل الشقة...</div>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loadingProgress"></div>
         </div>
-    </nav>
-
-    <main class="max-w-7xl mx-auto px-5 py-8 relative z-10">
-
-        <!-- معرض الصور -->
-        <section class="mb-10 anim">
-            <div class="flex items-center gap-2 text-muted text-sm mb-4">
-                <a href="#" class="hover:text-accent transition-colors">الرئيسية</a>
-                <i class="fas fa-chevron-left text-[10px]"></i>
-                <a href="#" class="hover:text-accent transition-colors">الغرف</a>
-                <i class="fas fa-chevron-left text-[10px]"></i>
-                <span class="text-fg">الجناح الملكي</span>
-            </div>
-
-            <div class="zoom-container" id="mainZoom">
-                <img class="zoom-img" id="mainImg" src="https://picsum.photos/seed/luxroom1/1200/750" alt="الجناح الملكي">
-                <div class="zoom-level" id="zoomLvl">100%</div>
-                <div class="absolute top-4 right-4 bg-black/60 backdrop-blur-md rounded-xl px-4 py-1.5 text-sm z-10 font-semibold">
-                    <span id="imgCur">1</span> / <span id="imgTot">6</span>
-                </div>
-                <div class="zoom-controls">
-                    <button class="zoom-btn" id="zIn" title="تكبير"><i class="fas fa-plus"></i></button>
-                    <button class="zoom-btn" id="zOut" title="تصغير"><i class="fas fa-minus"></i></button>
-                    <button class="zoom-btn" id="zReset" title="إعادة تعيين"><i class="fas fa-expand"></i></button>
-                </div>
-            </div>
-
-            <div class="flex gap-3 mt-4 overflow-x-auto pb-2" id="thumbs"></div>
-            <p class="text-muted text-xs mt-3 flex items-center gap-2">
-                <i class="fas fa-computer-mouse"></i>
-                عجلة الماوس للتكبير والتصغير — اسحب للتحريك عند التكبير — نقرة مزدوجة للتبديل
-            </p>
-        </section>
-
-        <!-- معلومات سريعة -->
-        <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 anim d1">
-            <div class="bg-card border border-border rounded-2xl p-5 text-center group hover:border-accent/40 transition-all">
-                <i class="fas fa-ruler-combined text-accent text-xl mb-2 group-hover:scale-110 transition-transform"></i>
-                <div class="text-2xl font-black">85</div>
-                <div class="text-muted text-sm">متر مربع</div>
-            </div>
-            <div class="bg-card border border-border rounded-2xl p-5 text-center group hover:border-accent/40 transition-all">
-                <i class="fas fa-users text-accent text-xl mb-2 group-hover:scale-110 transition-transform"></i>
-                <div class="text-2xl font-black">4</div>
-                <div class="text-muted text-sm">ضيوف</div>
-            </div>
-            <div class="bg-card border border-border rounded-2xl p-5 text-center group hover:border-accent/40 transition-all">
-                <i class="fas fa-bed text-accent text-xl mb-2 group-hover:scale-110 transition-transform"></i>
-                <div class="text-2xl font-black">كينج</div>
-                <div class="text-muted text-sm">نوع السرير</div>
-            </div>
-            <div class="bg-card border border-border rounded-2xl p-5 text-center group hover:border-accent/40 transition-all">
-                <i class="fas fa-mountain-sun text-accent text-xl mb-2 group-hover:scale-110 transition-transform"></i>
-                <div class="text-2xl font-black">بحري</div>
-                <div class="text-muted text-sm">إطلالة</div>
-            </div>
-        </section>
-
-        <!-- المحتوى الرئيسي: عمودين -->
-        <div class="grid lg:grid-cols-3 gap-8 mb-14">
-            <!-- العمود الأيسر -->
-            <div class="lg:col-span-2 space-y-10">
-                <!-- الوصف -->
-                <section class="anim d2">
-                    <h2 class="text-2xl font-black mb-4">وصف الجناح</h2>
-                    <p class="text-muted leading-[1.9] mb-4">
-                        الجناح الملكي يجمع بين الفخامة والراحة في مساحة واسعة تبلغ 85 متراً مربعاً.
-                        صُمم بعناية فائقة ليمنحك إقامة استثنائية، مع إطلالة بانورامية على البحر
-                        وتشطيبات من أجود المواد الطبيعية. يتميز بإضاءة طبيعية وفيرة من خلال النوافذ الكبيرة.
-                    </p>
-                    <p class="text-muted leading-[1.9]">
-                        يشمل غرفة نوم رئيسية مع سرير كينج سايز، منطقة جلوس مريحة،
-                        مكتب عمل، وحمام فاخر مجهز بحوض استحمام دائري. خدمة الغرف على مدار الساعة
-                        مع قائمة طعام مخصصة من الطاهي الشخصي.
-                    </p>
-                </section>
-
-                <!-- المرافق -->
-                <section class="anim d3">
-                    <h2 class="text-2xl font-black mb-4">المرافق والخدمات</h2>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="amenGrid"></div>
-                </section>
-
-                <!-- المعاينة ثلاثية الأبعاد -->
-                <section class="anim d4">
-                    <div class="flex items-start justify-between mb-4 flex-wrap gap-3">
-                        <div>
-                            <h2 class="text-2xl font-black">معاينة ثلاثية الأبعاد</h2>
-                            <p class="text-muted text-sm mt-1">نموذج فلات يوضح تخطيط غرفة النوم</p>
-                        </div>
-                        <div class="flex gap-2 flex-wrap">
-                            <button class="room3d-btn active" data-time="morning" onclick="setTimeOfDay('morning')">
-                                <i class="fas fa-sun text-yellow-400"></i> صباح
-                            </button>
-                            <button class="room3d-btn" data-time="afternoon" onclick="setTimeOfDay('afternoon')">
-                                <i class="fas fa-cloud-sun text-orange-400"></i> بعد الظهر
-                            </button>
-                            <button class="room3d-btn" data-time="night" onclick="setTimeOfDay('night')">
-                                <i class="fas fa-moon text-blue-300"></i> ليلاً
-                            </button>
-                            <button class="room3d-btn" id="dimBtn" onclick="toggleDimensions()">
-                                <i class="fas fa-ruler-combined"></i> الأبعاد
-                            </button>
-                            <button class="room3d-btn active" id="hsBtn" onclick="toggleHotspots()">
-                                <i class="fas fa-map-pin"></i> النقاط
-                            </button>
-                        </div>
-                    </div>
-                    <div id="room3d-container">
-                        <div class="hotspot-info" id="hsInfo">
-                            <h4 class="font-bold text-accent mb-1" id="hsTitle"></h4>
-                            <p class="text-sm text-muted leading-relaxed" id="hsDesc"></p>
-                        </div>
-                        <div id="dimPanel" class="absolute top-4 right-4 bg-black/75 backdrop-blur-md rounded-xl px-4 py-3 text-sm z-10" style="display:none;">
-                            <div class="text-accent font-bold mb-1"><i class="fas fa-ruler-combined ml-1"></i> أبعاد غرفة النوم</div>
-                            <div class="text-fg">العرض: <span class="text-accent font-bold">8</span>م &nbsp;|&nbsp; الطول: <span class="text-accent font-bold">6</span>م &nbsp;|&nbsp; الارتفاع: <span class="text-accent font-bold">3.5</span>م</div>
-                            <div class="text-muted text-xs mt-1">مساحة الأرضية: 48 م² (جزء من الـ 85 م² الإجمالية)</div>
-                        </div>
-                    </div>
-                    <p class="text-muted text-xs mt-3 flex items-center gap-2">
-                        <i class="fas fa-hand-pointer"></i>
-                        اسحب للتدوير — عجلة الماوس للتكبير — انقر على النقاط الملونة للتفاصيل
-                    </p>
-                </section>
-            </div>
-
-            <!-- العمود الأيمن -->
-            <div class="space-y-6">
-                <!-- بطاقة الحجز -->
-                <div class="bg-card border border-border rounded-2xl p-6 lg:sticky lg:top-24 anim d2">
-                    <div class="flex items-baseline gap-2 mb-6">
-                        <span class="text-4xl font-black text-accent">2,800</span>
-                        <span class="text-muted text-sm">جنيه / ليلة</span>
-                    </div>
-                    <div class="space-y-4 mb-6">
-                        <div>
-                            <label class="text-sm text-muted mb-1.5 block">تاريخ الوصول</label>
-                            <input type="date" id="cin" class="w-full bg-elevated border border-border rounded-xl px-4 py-3 text-fg text-sm focus:outline-none focus:border-accent transition-colors">
-                        </div>
-                        <div>
-                            <label class="text-sm text-muted mb-1.5 block">تاريخ المغادرة</label>
-                            <input type="date" id="cout" class="w-full bg-elevated border border-border rounded-xl px-4 py-3 text-fg text-sm focus:outline-none focus:border-accent transition-colors">
-                        </div>
-                        <div>
-                            <label class="text-sm text-muted mb-1.5 block">عدد الضيوف</label>
-                            <div class="flex items-center gap-4">
-                                <button class="w-11 h-11 rounded-xl bg-elevated border border-border text-fg hover:border-accent transition-colors flex items-center justify-center" onclick="chgGuests(-1)">
-                                    <i class="fas fa-minus text-xs"></i>
-                                </button>
-                                <span class="text-xl font-black w-8 text-center" id="gCnt">2</span>
-                                <button class="w-11 h-11 rounded-xl bg-elevated border border-border text-fg hover:border-accent transition-colors flex items-center justify-center" onclick="chgGuests(1)">
-                                    <i class="fas fa-plus text-xs"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="priceBD" class="space-y-2.5 py-4 border-t border-b border-border mb-6 text-sm" style="display:none;">
-                        <div class="flex justify-between text-muted">
-                            <span id="nLbl">0 ليالي</span>
-                            <span id="nPrice">0 جنيه</span>
-                        </div>
-                        <div class="flex justify-between text-muted">
-                            <span>ضرائب ورسوم (14%)</span>
-                            <span id="tPrice">0 جنيه</span>
-                        </div>
-                        <div class="flex justify-between font-bold text-fg text-base pt-2 border-t border-border/50">
-                            <span>الإجمالي</span>
-                            <span class="text-accent text-lg" id="totPrice">0 جنيه</span>
-                        </div>
-                    </div>
-                    <button class="w-full py-4 bg-accent text-bg font-black rounded-xl hover:bg-accent-h transition-colors text-lg" onclick="bookRoom()">
-                        تأكيد الحجز
-                    </button>
-                    <p class="text-center text-muted text-xs mt-3 flex items-center justify-center gap-1.5">
-                        <i class="fas fa-shield-halved text-sage"></i>
-                        إلغاء مجاني حتى 48 ساعة قبل الوصول
-                    </p>
-                </div>
-
-                <!-- تواصل سريع -->
-                <div class="bg-card border border-border rounded-2xl p-6 anim d3">
-                    <h3 class="font-bold mb-3">تحتاج مساعدة؟</h3>
-                    <div class="space-y-1 text-sm">
-                        <a href="#" class="flex items-center gap-3 text-muted hover:text-accent transition-colors py-2">
-                            <i class="fas fa-phone w-5 text-center"></i><span dir="ltr">+20 2 1234 5678</span>
-                        </a>
-                        <a href="#" class="flex items-center gap-3 text-muted hover:text-accent transition-colors py-2">
-                            <i class="fab fa-whatsapp w-5 text-center"></i><span dir="ltr">+20 10 9876 5432</span>
-                        </a>
-                        <a href="#" class="flex items-center gap-3 text-muted hover:text-accent transition-colors py-2">
-                            <i class="fas fa-envelope w-5 text-center"></i><span>rooms@lakjry.com</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
+        <div class="loading-text" id="loadingText">0%</div>
+    </div>
+    
+    <div class="header">
+        <div class="logo">🏠 شقتنا — جولة تفاعلية v7</div>
+        <div class="nav-tabs">
+            <button class="tab-btn active" data-view="walk">🚶 الجولة</button>
+            <button class="tab-btn" data-view="plan">📋 المخطط</button>
+            <button class="tab-btn" data-view="3d">🏗️ 3D</button>
         </div>
-
-        <!-- مقترحات إضافية -->
-        <section class="mb-16">
-            <div class="text-center mb-10">
-                <h2 class="text-3xl font-black mb-2">مقترحات إضافية لتحسين الصفحة</h2>
-                <p class="text-muted">فييتشرز مقترحة لتعزيز تجربة المستخدم والتحويل</p>
-            </div>
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5" id="sugGrid"></div>
-        </section>
-    </main>
-
-    <!-- الفوتر -->
-    <footer class="border-t border-border py-12">
-        <div class="max-w-7xl mx-auto px-5">
-            <div class="grid md:grid-cols-4 gap-8 mb-8">
-                <div>
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-8 h-8 rounded-lg bg-accent flex items-center justify-center"><i class="fas fa-crown text-bg text-xs"></i></div>
-                        <span class="font-bold">لاكجري</span>
-                    </div>
-                    <p class="text-muted text-sm leading-relaxed">تجربة فندقية فاخرة تجمع بين الأصالة والحداثة.</p>
-                </div>
-                <div>
-                    <h4 class="font-bold mb-3">روابط سريعة</h4>
-                    <div class="space-y-2 text-sm text-muted">
-                        <a href="#" class="block hover:text-accent transition-colors">الغرف والجناحات</a>
-                        <a href="#" class="block hover:text-accent transition-colors">المطاعم والبارات</a>
-                        <a href="#" class="block hover:text-accent transition-colors">السبا واللياقة</a>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="font-bold mb-3">الدعم</h4>
-                    <div class="space-y-2 text-sm text-muted">
-                        <a href="#" class="block hover:text-accent transition-colors">الأسئلة الشائعة</a>
-                        <a href="#" class="block hover:text-accent transition-colors">سياسة الإلغاء</a>
-                        <a href="#" class="block hover:text-accent transition-colors">الشروط والأحكام</a>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="font-bold mb-3">تابعنا</h4>
-                    <div class="flex gap-3">
-                        <a href="#" class="w-10 h-10 rounded-xl bg-elevated border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-all"><i class="fab fa-instagram"></i></a>
-                        <a href="#" class="w-10 h-10 rounded-xl bg-elevated border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-all"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="w-10 h-10 rounded-xl bg-elevated border border-border flex items-center justify-center text-muted hover:text-accent hover:border-accent transition-all"><i class="fab fa-facebook-f"></i></a>
-                    </div>
-                </div>
-            </div>
-            <div class="border-t border-border pt-6 text-center text-muted text-sm">جميع الحقوق محفوظة 2025</div>
+    </div>
+    
+    <div class="compass" id="compass">
+        <span class="compass-icon">🧭</span>
+        <span id="compassDirection">شمال</span>
+    </div>
+    
+    <div class="room-progress" id="roomProgress">
+        <div class="progress-title">الغرف المزارة</div>
+        <div class="progress-list" id="progressList"></div>
+    </div>
+    
+    <div class="walk-mode active" id="walkMode">
+        <div class="panorama-container" id="panoramaContainer">
+            <img class="panorama-image" id="panoramaImage" src="" alt="Panorama">
+            <div id="hotspotsContainer"></div>
         </div>
-    </footer>
-
-    <!-- التوست -->
-    <div class="toast" id="toast"><i class="fas fa-check-circle text-accent"></i><span id="toastMsg"></span></div>
-
-    <!-- سكريبت عادي: الزوم، المعرض، الحاسبة، واجهة المستخدم -->
+        
+        <div class="room-info" id="roomInfo">
+            <div class="room-name" id="roomName">غرفة المعيشة</div>
+            <div class="room-details" id="roomDetails"></div>
+        </div>
+        
+        <div class="mini-map">
+            <div class="mini-map-title">أنت هنا</div>
+            <svg class="mini-map-svg" id="miniMapSvg" viewBox="0 0 100 100"></svg>
+        </div>
+        
+        <div class="nav-controls">
+            <button class="nav-btn" id="prevRoom">‹</button>
+            <button class="nav-btn" id="nextRoom">›</button>
+        </div>
+        
+        <button class="auto-tour-btn" id="autoTourBtn">
+            <span>▶</span>
+            <span>جولة سينمائية</span>
+        </button>
+    </div>
+    
+    <div class="plan-view" id="planView">
+        <svg class="plan-svg" id="planSvg" viewBox="0 0 400 300"></svg>
+    </div>
+    
+    <div class="three-view" id="threeView">
+        <canvas id="three-canvas"></canvas>
+    </div>
+    
+    <button class="dollhouse-btn" id="dollhouseBtn">
+        <span>🏠</span>
+        <span>Dollhouse</span>
+    </button>
+    
+    <button class="fullscreen-btn" id="fullscreenBtn">⛶</button>
+    
+    <div class="transition-overlay" id="transitionOverlay"></div>
+    
     <script>
-        // === البيانات ===
-        const images = [
-            { src: 'https://picsum.photos/seed/luxroom1/1200/750', label: 'منظر عام' },
-            { src: 'https://picsum.photos/seed/luxroom2/1200/750', label: 'السرير' },
-            { src: 'https://picsum.photos/seed/luxroom3/1200/750', label: 'الحمام' },
-            { src: 'https://picsum.photos/seed/luxroom4/1200/750', label: 'الإطلالة' },
-            { src: 'https://picsum.photos/seed/luxroom5/1200/750', label: 'منطقة الجلوس' },
-            { src: 'https://picsum.photos/seed/luxroom6/1200/750', label: 'المكتب' },
+        const rooms = [
+            {
+                id: 'living',
+                name: 'غرفة المعيشة',
+                nameEn: 'Living Room',
+                area: 25.5,
+                dimensions: '5.5m × 4.6m',
+                windows: 2,
+                direction: 'جنوب',
+                floor: 'باركيه',
+                image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1920',
+                hotspots: [
+                    { x: 30, y: 50, icon: '🚪', label: 'باب المدخل' },
+                    { x: 70, y: 30, icon: '🪟', label: 'شباك' },
+                    { x: 50, y: 70, icon: '🛋️', label: 'كنبة' }
+                ]
+            },
+            {
+                id: 'bedroom',
+                name: 'غرفة النوم',
+                nameEn: 'Bedroom',
+                area: 14.2,
+                dimensions: '4.0m × 3.5m',
+                windows: 1,
+                direction: 'شرق',
+                floor: 'سيراميك',
+                image: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=1920',
+                hotspots: [
+                    { x: 40, y: 60, icon: '🛏️', label: 'سرير' },
+                    { x: 80, y: 40, icon: '🪟', label: 'شباك' },
+                    { x: 20, y: 30, icon: '🚪', label: 'باب' }
+                ]
+            },
+            {
+                id: 'kitchen',
+                name: 'المطبخ',
+                nameEn: 'Kitchen',
+                area: 12.8,
+                dimensions: '4.0m × 3.2m',
+                windows: 1,
+                direction: 'غرب',
+                floor: 'سيراميك',
+                image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1920',
+                hotspots: [
+                    { x: 50, y: 40, icon: '🍳', label: 'بوتاجاز' },
+                    { x: 30, y: 60, icon: '🚰', label: 'حوض' },
+                    { x: 70, y: 50, icon: '🧊', label: 'ثلاجة' }
+                ]
+            },
+            {
+                id: 'bathroom',
+                name: 'الحمام',
+                nameEn: 'Bathroom',
+                area: 6.5,
+                dimensions: '2.5m × 2.6m',
+                windows: 1,
+                direction: 'شمال',
+                floor: 'سيراميك',
+                image: 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1920',
+                hotspots: [
+                    { x: 40, y: 50, icon: '🚿', label: 'دش' },
+                    { x: 60, y: 40, icon: '🚽', label: 'تواليت' },
+                    { x: 30, y: 70, icon: '🚰', label: 'حوض' }
+                ]
+            },
+            {
+                id: 'balcony',
+                name: 'البلكونة',
+                nameEn: 'Balcony',
+                area: 8.0,
+                dimensions: '4.0m × 2.0m',
+                windows: 0,
+                direction: 'جنوب',
+                floor: 'سيراميك',
+                image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920',
+                hotspots: [
+                    { x: 50, y: 50, icon: '🌿', label: 'نباتات' },
+                    { x: 30, y: 40, icon: '🪑', label: 'كرسي' }
+                ]
+            }
         ];
-        const amenities = [
-            { icon: 'fa-wifi', label: 'واي فاي مجاني' },
-            { icon: 'fa-tv', label: 'تلفزيون 55 بوصة' },
-            { icon: 'fa-snowflake', label: 'تكييف مركزي' },
-            { icon: 'fa-bath', label: 'حوض استحمام دائري' },
-            { icon: 'fa-mug-hot', label: 'ماكينة قهوة' },
-            { icon: 'fa-safe', label: 'خزنة آمنة' },
-            { icon: 'fa-shirt', label: 'خزانة ملابس' },
-            { icon: 'fa-phone', label: 'هاتف دولي' },
-            { icon: 'fa-bell-concierge', label: 'خدمة غرف 24/7' },
-            { icon: 'fa-utensils', label: 'فطور مجاني' },
-            { icon: 'fa-car', label: 'موقف سيارات' },
-            { icon: 'fa-spa', label: 'دخول السبا مجاني' },
-        ];
-        const suggestions = [
-            { icon: 'fa-lightbulb', title: 'إضاءة حسب الوقت', desc: 'تغيير إضاءة المعاينة 3D بين الصباح وبعد الظهر والليل لمحاكاة الواقع الفعلي للغرفة.', done: true },
-            { icon: 'fa-map-pin', title: 'نقاط تفاعلية', desc: 'نقاط قابلة للنقر في المعاينة 3D تعرض وصفاً تفصيلياً لكل عنصر في الغرفة.', done: true },
-            { icon: 'fa-ruler-combined', title: 'عرض الأبعاد', desc: 'إظهار أبعاد الغرفة والأثاث على المعاينة 3D لمساعدة الضيف في تخيّل المساحة.', done: true },
-            { icon: 'fa-calculator', title: 'حاسبة سعر ديناميكية', desc: 'حساب تلقائي للسعر الإجمالي بناءً على التواريخ وعدد الليالي والضيوف.', done: true },
-            { icon: 'fa-code-compare', title: 'مقارنة الغرف', desc: 'أداة مقارنة جانبية بين غرفتين أو أكثر تعرض الفروقات في المساحة والسعر والمرافق.', done: false },
-            { icon: 'fa-street-view', title: 'جولة افتراضية 360°', desc: 'جولة تفاعلية كاملة داخل الغرفة بصور بانورامية أو مشاهد ثلاثية الأبعاد.', done: false },
-            { icon: 'fa-palette', title: 'تخصيص ألوان الغرفة', desc: 'السماح للضيف بتغيير ألوان الجدران والبطانيات في المعاينة 3D قبل الحجز.', done: false },
-            { icon: 'fa-comment-dots', title: 'ملاحظات على الصور', desc: 'إضافة ملاحظات أو أسئلة على صور الغرفة ومشاركتها مع فريق الحجز.', done: false },
-            { icon: 'fa-share-nodes', title: 'مشاركة وحفظ', desc: 'حفظ الغرفة في المفضلة ومشاركتها عبر روابط مخصصة أو وسائل التواصل.', done: false },
-        ];
-
-        // === فئة التحكم في الزوم ===
-        class ImageZoomer {
-            constructor(el) {
-                this.el = el;
-                this.img = el.querySelector('.zoom-img');
-                this.s = 1;          // المقياس الحالي
-                this.minS = 1;
-                this.maxS = 5;
-                this.x = 0; this.y = 0;
-                this.drag = false;
-                this.lx = 0; this.ly = 0;
-                this.pinchD = null;
-                this.pinchS = 1;
-                this.tmr = null;
-                this._bind();
-            }
-            _bind() {
-                // عجلة الماوس
-                this.el.addEventListener('wheel', e => {
-                    e.preventDefault();
-                    const r = this.el.getBoundingClientRect();
-                    const mx = e.clientX - r.left - r.width / 2;
-                    const my = e.clientY - r.top - r.height / 2;
-                    const old = this.s;
-                    this.s = Math.max(this.minS, Math.min(this.maxS, this.s + (e.deltaY < 0 ? 0.3 : -0.3)));
-                    if (this.s > 1) {
-                        const ratio = this.s / old;
-                        this.x = mx - (mx - this.x) * ratio;
-                        this.y = my - (my - this.y) * ratio;
-                    } else { this.x = 0; this.y = 0; }
-                    this._clamp(); this._apply(); this._showLvl();
-                }, { passive: false });
-
-                // سحب بالماوس
-                this.el.addEventListener('mousedown', e => {
-                    if (this.s <= 1) return;
-                    e.preventDefault(); this.drag = true; this.lx = e.clientX; this.ly = e.clientY;
-                    this.el.style.cursor = 'grabbing';
+        
+        let currentRoomIndex = 0;
+        let visitedRooms = new Set();
+        let zoomLevel = 0.9;
+        let panX = 0, panY = 0;
+        let isDragging = false;
+        let lastX = 0, lastY = 0;
+        let autoTourActive = false;
+        let autoTourInterval = null;
+        
+        function simulateLoading() {
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        document.getElementById('loadingScreen').classList.add('hidden');
+                    }, 500);
+                }
+                document.getElementById('loadingProgress').style.width = progress + '%';
+                document.getElementById('loadingText').textContent = Math.floor(progress) + '%';
+            }, 200);
+        }
+        
+        function init() {
+            simulateLoading();
+            setupEventListeners();
+            loadRoom(0);
+            updateProgress();
+            drawMiniMap();
+            drawPlanView();
+            initThreeJS();
+        }
+        
+        function setupEventListeners() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    switchView(btn.dataset.view);
                 });
-                window.addEventListener('mousemove', e => {
-                    if (!this.drag) return;
-                    this.x += e.clientX - this.lx; this.y += e.clientY - this.ly;
-                    this.lx = e.clientX; this.ly = e.clientY;
-                    this._clamp(); this._apply();
-                });
-                window.addEventListener('mouseup', () => {
-                    if (this.drag) { this.drag = false; this.el.style.cursor = this.s > 1 ? 'grab' : 'zoom-in'; }
-                });
-
-                // نقرة مزدوجة
-                this.el.addEventListener('dblclick', () => {
-                    this.s > 1.5 ? this.reset() : (this.s = 2.5, this._clamp(), this._apply(), this._showLvl());
-                });
-
-                // لمس: سحب
-                this.el.addEventListener('touchstart', e => {
-                    if (e.touches.length === 2) {
-                        e.preventDefault();
-                        this.pinchD = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                        this.pinchS = this.s;
-                    } else if (e.touches.length === 1 && this.s > 1) {
-                        e.preventDefault(); this.drag = true;
-                        this.lx = e.touches[0].clientX; this.ly = e.touches[0].clientY;
-                    }
-                }, { passive: false });
-                this.el.addEventListener('touchmove', e => {
-                    if (e.touches.length === 2) {
-                        e.preventDefault();
-                        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                        this.s = Math.max(this.minS, Math.min(this.maxS, this.pinchS * (d / this.pinchD)));
-                        if (this.s <= 1) { this.x = 0; this.y = 0; }
-                        this._clamp(); this._apply(); this._showLvl();
-                    } else if (e.touches.length === 1 && this.drag) {
-                        e.preventDefault();
-                        this.x += e.touches[0].clientX - this.lx; this.y += e.touches[0].clientY - this.ly;
-                        this.lx = e.touches[0].clientX; this.ly = e.touches[0].clientY;
-                        this._clamp(); this._apply();
-                    }
-                }, { passive: false });
-                this.el.addEventListener('touchend', () => { this.drag = false; this.pinchD = null; });
+            });
+            
+            document.getElementById('prevRoom').addEventListener('click', () => navigateRoom(-1));
+            document.getElementById('nextRoom').addEventListener('click', () => navigateRoom(1));
+            
+            const container = document.getElementById('panoramaContainer');
+            container.addEventListener('wheel', handleZoom);
+            container.addEventListener('mousedown', startDrag);
+            container.addEventListener('mousemove', drag);
+            container.addEventListener('mouseup', endDrag);
+            container.addEventListener('mouseleave', endDrag);
+            
+            container.addEventListener('touchstart', handleTouchStart);
+            container.addEventListener('touchmove', handleTouchMove);
+            container.addEventListener('touchend', endDrag);
+            
+            document.getElementById('autoTourBtn').addEventListener('click', toggleAutoTour);
+            document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+            document.getElementById('dollhouseBtn').addEventListener('click', showDollhouse);
+            document.addEventListener('keydown', handleKeyboard);
+        }
+        
+        function switchView(view) {
+            document.getElementById('walkMode').classList.remove('active');
+            document.getElementById('planView').classList.remove('active');
+            document.getElementById('threeView').classList.remove('active');
+            
+            if (view === 'walk') {
+                document.getElementById('walkMode').classList.add('active');
+            } else if (view === 'plan') {
+                document.getElementById('planView').classList.add('active');
+            } else if (view === '3d') {
+                document.getElementById('threeView').classList.add('active');
             }
-            _clamp() {
-                if (this.s <= 1) { this.x = 0; this.y = 0; return; }
-                const r = this.el.getBoundingClientRect();
-                const mx = Math.max(0, (r.width * this.s - r.width) / 2);
-                const my = Math.max(0, (r.height * this.s - r.height) / 2);
-                this.x = Math.max(-mx, Math.min(mx, this.x));
-                this.y = Math.max(-my, Math.min(my, this.y));
-            }
-            _apply() {
-                this.img.style.transform = `translate(${this.x}px,${this.y}px) scale(${this.s})`;
-                if (!this.drag) this.el.style.cursor = this.s > 1 ? 'grab' : 'zoom-in';
-            }
-            _showLvl() {
-                const el = document.getElementById('zoomLvl');
-                el.textContent = Math.round(this.s * 100) + '%';
-                el.classList.add('visible');
-                clearTimeout(this.tmr);
-                this.tmr = setTimeout(() => el.classList.remove('visible'), 1500);
-            }
-            zoomIn() { this.s = Math.min(this.maxS, this.s + 0.5); this._clamp(); this._apply(); this._showLvl(); }
-            zoomOut() { this.s = Math.max(this.minS, this.s - 0.5); if (this.s <= 1) { this.x = 0; this.y = 0; } this._clamp(); this._apply(); this._showLvl(); }
-            reset() { this.s = 1; this.x = 0; this.y = 0; this._apply(); this._showLvl(); }
-            setImg(src) {
-                this.reset();
-                this.img.style.opacity = '0';
+        }
+        
+        function loadRoom(index) {
+            const room = rooms[index];
+            currentRoomIndex = index;
+            visitedRooms.add(room.id);
+            
+            const overlay = document.getElementById('transitionOverlay');
+            overlay.classList.add('active');
+            
+            setTimeout(() => {
+                const img = document.getElementById('panoramaImage');
+                img.src = room.image;
+                
+                zoomLevel = 0.9;
+                panX = 0;
+                panY = 0;
+                updateTransform();
+                
+                document.getElementById('roomName').textContent = room.name;
+                updateRoomDetails(room);
+                updateHotspots(room);
+                updateMiniMap();
+                updateProgress();
+                updateCompass(room.direction);
+                
                 setTimeout(() => {
-                    this.img.src = src;
-                    this.img.onload = () => {
-                        this.img.style.transition = 'opacity 0.3s';
-                        this.img.style.opacity = '1';
-                        setTimeout(() => this.img.style.transition = 'none', 300);
-                    };
-                }, 120);
+                    overlay.classList.remove('active');
+                }, 300);
+            }, 300);
+        }
+        
+        function updateRoomDetails(room) {
+            const details = document.getElementById('roomDetails');
+            details.innerHTML = `
+                <div class="room-detail">
+                    <span class="room-detail-icon">🏠</span>
+                    <span>المساحة: ${room.area} م²</span>
+                </div>
+                <div class="room-detail">
+                    <span class="room-detail-icon">📏</span>
+                    <span>الأبعاد: ${room.dimensions}</span>
+                </div>
+                <div class="room-detail">
+                    <span class="room-detail-icon">🪟</span>
+                    <span>عدد الشبابيك: ${room.windows}</span>
+                </div>
+                <div class="room-detail">
+                    <span class="room-detail-icon">☀️</span>
+                    <span>الاتجاه: ${room.direction}</span>
+                </div>
+                <div class="room-detail">
+                    <span class="room-detail-icon">🛏️</span>
+                    <span>الأرضية: ${room.floor}</span>
+                </div>
+            `;
+        }
+        
+        function updateHotspots(room) {
+            const container = document.getElementById('hotspotsContainer');
+            container.innerHTML = '';
+            
+            room.hotspots.forEach(hotspot => {
+                const div = document.createElement('div');
+                div.className = 'hotspot';
+                div.style.left = hotspot.x + '%';
+                div.style.top = hotspot.y + '%';
+                div.innerHTML = `
+                    ${hotspot.icon}
+                    <div class="hotspot-tooltip">${hotspot.label}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function navigateRoom(direction) {
+            let newIndex = currentRoomIndex + direction;
+            if (newIndex < 0) newIndex = rooms.length - 1;
+            if (newIndex >= rooms.length) newIndex = 0;
+            loadRoom(newIndex);
+        }
+        
+        function handleZoom(e) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            zoomLevel = Math.max(0.75, Math.min(4, zoomLevel + delta));
+            updateTransform();
+        }
+        
+        function startDrag(e) {
+            isDragging = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+        }
+        
+        function drag(e) {
+            if (!isDragging) return;
+            
+            const dx = e.clientX - lastX;
+            const dy = e.clientY - lastY;
+            
+            panX += dx;
+            panY += dy;
+            
+            lastX = e.clientX;
+            lastY = e.clientY;
+            
+            updateTransform();
+        }
+        
+        function endDrag() {
+            isDragging = false;
+        }
+        
+        function handleTouchStart(e) {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                lastX = e.touches[0].clientX;
+                lastY = e.touches[0].clientY;
             }
         }
-
-        // === التهيئة ===
-        let zoomer, curImg = 0, guests = 2;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            zoomer = new ImageZoomer(document.getElementById('mainZoom'));
-            document.getElementById('zIn').onclick = () => zoomer.zoomIn();
-            document.getElementById('zOut').onclick = () => zoomer.zoomOut();
-            document.getElementById('zReset').onclick = () => zoomer.reset();
-
-            // الصور المصغرة
-            const strip = document.getElementById('thumbs');
-            images.forEach((im, i) => {
-                const d = document.createElement('div');
-                d.className = `thumb ${i === 0 ? 'active' : ''}`;
-                d.innerHTML = `<img src="${im.src}" alt="${im.label}" loading="lazy">`;
-                d.onclick = () => selImg(i);
-                strip.appendChild(d);
-            });
-
-            // المرافق
-            const ag = document.getElementById('amenGrid');
-            amenities.forEach(a => {
-                const d = document.createElement('div');
-                d.className = 'flex items-center gap-3 bg-elevated border border-border rounded-xl p-3.5 text-sm hover:border-accent/30 transition-colors';
-                d.innerHTML = `<i class="fas ${a.icon} text-accent w-5 text-center"></i><span>${a.label}</span>`;
-                ag.appendChild(d);
-            });
-
-            // المقترحات
-            const sg = document.getElementById('sugGrid');
-            suggestions.forEach(s => {
-                const d = document.createElement('div');
-                d.className = `sug-card ${s.done ? 'done' : ''}`;
-                d.innerHTML = `
-                    <span class="sug-badge ${s.done ? '' : 'plan'}">${s.done ? 'مُنفّذ' : 'مقترح'}</span>
-                    <div class="w-11 h-11 rounded-xl ${s.done ? 'bg-sage/15' : 'bg-elevated'} flex items-center justify-center mb-3">
-                        <i class="fas ${s.icon} ${s.done ? 'text-sage' : 'text-muted'}"></i>
-                    </div>
-                    <h3 class="font-bold mb-2 text-[15px]">${s.title}</h3>
-                    <p class="text-muted text-sm leading-relaxed">${s.desc}</p>`;
-                sg.appendChild(d);
-            });
-
-            // تواريخ افتراضية
-            const t = new Date(), t2 = new Date(t), t3 = new Date(t);
-            t2.setDate(t2.getDate() + 1); t3.setDate(t3.getDate() + 3);
-            document.getElementById('cin').value = t2.toISOString().split('T')[0];
-            document.getElementById('cout').value = t3.toISOString().split('T')[0];
-            document.getElementById('cin').addEventListener('change', calcPrice);
-            document.getElementById('cout').addEventListener('change', calcPrice);
-            calcPrice();
-        });
-
-        function selImg(i) {
-            curImg = i;
-            zoomer.setImg(images[i].src);
-            document.getElementById('imgCur').textContent = i + 1;
-            document.querySelectorAll('.thumb').forEach((t, j) => t.classList.toggle('active', j === i));
+        
+        function handleTouchMove(e) {
+            if (!isDragging || e.touches.length !== 1) return;
+            e.preventDefault();
+            
+            const dx = e.touches[0].clientX - lastX;
+            const dy = e.touches[0].clientY - lastY;
+            
+            panX += dx;
+            panY += dy;
+            
+            lastX = e.touches[0].clientX;
+            lastY = e.touches[0].clientY;
+            
+            updateTransform();
         }
-
-        function chgGuests(d) {
-            guests = Math.max(1, Math.min(4, guests + d));
-            document.getElementById('gCnt').textContent = guests;
+        
+        function updateTransform() {
+            const img = document.getElementById('panoramaImage');
+            img.style.transform = `scale(${zoomLevel}) translate(${panX}px, ${panY}px)`;
         }
-
-        function calcPrice() {
-            const ci = document.getElementById('cin').value, co = document.getElementById('cout').value;
-            const bd = document.getElementById('priceBD');
-            if (!ci || !co) { bd.style.display = 'none'; return; }
-            const n = Math.max(0, Math.ceil((new Date(co) - new Date(ci)) / 864e5));
-            if (n <= 0) { bd.style.display = 'none'; return; }
-            const sub = n * 2800, tax = Math.round(sub * 0.14), tot = sub + tax;
-            document.getElementById('nLbl').textContent = `${n} ${n === 1 ? 'ليلة' : 'ليالي'}`;
-            document.getElementById('nPrice').textContent = `${sub.toLocaleString()} جنيه`;
-            document.getElementById('tPrice').textContent = `${tax.toLocaleString()} جنيه`;
-            document.getElementById('totPrice').textContent = `${tot.toLocaleString()} جنيه`;
-            bd.style.display = 'block';
-        }
-
-        function bookRoom() {
-            const ci = document.getElementById('cin').value, co = document.getElementById('cout').value;
-            if (!ci || !co) return toast('يرجى اختيار تواريخ الوصول والمغادرة');
-            const n = Math.ceil((new Date(co) - new Date(ci)) / 864e5);
-            if (n <= 0) return toast('تاريخ المغادرة يجب أن يكون بعد الوصول');
-            toast(`تم تأكيد الحجز: ${n} ليالي — ${guests} ضيوف`);
-        }
-
-        function toast(msg) {
-            const t = document.getElementById('toast');
-            document.getElementById('toastMsg').textContent = msg;
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 3500);
-        }
-
-        // دوال التحكم 3D — تُعيَّن من سكريبت الموديول
-        window.setTimeOfDay = () => {};
-        window.toggleDimensions = () => {};
-        window.toggleHotspots = () => {};
-    </script>
-
-    <!-- سكريبت الموديول: Three.js — الغرفة ثلاثية الأبعاد فلات -->
-    <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
-        const box = document.getElementById('room3d-container');
-        const W = () => box.clientWidth, H = () => box.clientHeight;
-
-        // المشهد
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xF0E8DA);
-
-        // الكاميرا
-        const cam = new THREE.PerspectiveCamera(38, W() / H(), 0.1, 100);
-        cam.position.set(8, 6.5, 8);
-
-        // المُقدِّم
-        const ren = new THREE.WebGLRenderer({ antialias: true });
-        ren.setSize(W(), H());
-        ren.setPixelRatio(Math.min(devicePixelRatio, 2));
-        ren.shadowMap.enabled = true;
-        ren.shadowMap.type = THREE.PCFSoftShadowMap;
-        box.insertBefore(ren.domElement, box.firstChild);
-
-        // التحكم
-        const ctrl = new OrbitControls(cam, ren.domElement);
-        ctrl.enableDamping = true; ctrl.dampingFactor = 0.07;
-        ctrl.minDistance = 5; ctrl.maxDistance = 20;
-        ctrl.maxPolarAngle = Math.PI / 2.1; ctrl.minPolarAngle = 0.15;
-        ctrl.target.set(0, 0.8, 0); ctrl.update();
-
-        // === الإضاءة ===
-        const amb = new THREE.AmbientLight(0xffffff, 0.55);
-        scene.add(amb);
-        const dir = new THREE.DirectionalLight(0xfff5e0, 1.3);
-        dir.position.set(3, 8, 2); dir.castShadow = true;
-        dir.shadow.mapSize.set(1024, 1024);
-        dir.shadow.camera.near = 0.5; dir.shadow.camera.far = 25;
-        dir.shadow.camera.left = -7; dir.shadow.camera.right = 7;
-        dir.shadow.camera.top = 7; dir.shadow.camera.bottom = -7;
-        scene.add(dir);
-        const wLight = new THREE.PointLight(0xB8D4E3, 0.9, 12);
-        wLight.position.set(0, 2.5, -2.5); scene.add(wLight);
-        // ضوء دافئ من اللمبة
-        const lampLight = new THREE.PointLight(0xF5E0B0, 0.4, 4);
-        lampLight.position.set(0.35, 1.2, -2.5); scene.add(lampLight);
-
-        // === الألوان ===
-        const C = {
-            floor: 0xE8DDD3, wall: 0xF5F0EB, wall2: 0xEEEAE4,
-            bed: 0xC8956C, matt: 0xFFFFFF, pillow: 0xF0EBE3, blanket: 0x5B8A5E,
-            wood: 0xD4A57E, dark: 0x4A4A4A, win: 0xB8D4E3,
-            ward: 0x8B7355, rug: 0xC17767, lamp: 0xF5E6C8,
-            shade: 0xF0EBE3, tv: 0x2C2C2C, screen: 0x1A1A2E,
-            plant: 0x4A7C59, pot: 0x8B7355, dim: 0xC8956C,
-        };
-
-        // دالة إنشاء صندوق
-        function bx(w, h, d, c, x, y, z, shadow = false) {
-            const g = new THREE.BoxGeometry(Math.max(0.001, w), Math.max(0.001, h), Math.max(0.001, d));
-            const m = new THREE.MeshLambertMaterial({ color: c, flatShading: true });
-            const mesh = new THREE.Mesh(g, m);
-            mesh.position.set(x, y, z); mesh.castShadow = shadow; mesh.receiveShadow = true;
-            return mesh;
-        }
-
-        const room = new THREE.Group(); scene.add(room);
-
-        // الأرضية
-        const flG = new THREE.PlaneGeometry(8, 6);
-        const fl = new THREE.Mesh(flG, new THREE.MeshLambertMaterial({ color: C.floor, flatShading: true }));
-        fl.rotation.x = -Math.PI / 2; fl.receiveShadow = true; room.add(fl);
-
-        // شبكة خفيفة على الأرضية
-        const gr = new THREE.GridHelper(8, 8, 0xD0C4B8, 0xD0C4B8);
-        gr.position.y = 0.003; gr.material.opacity = 0.25; gr.material.transparent = true; room.add(gr);
-
-        // الجدران
-        room.add(bx(8, 3.5, 0.12, C.wall, 0, 1.75, -3));       // خلفي
-        room.add(bx(0.12, 3.5, 6, C.wall2, -4, 1.75, 0));       // أيسر
-        // بلاط سفلية (قاعدة الجدار)
-        room.add(bx(8, 0.12, 0.15, C.ward, 0, 0.06, -2.92));
-        room.add(bx(0.15, 0.12, 6, C.ward, -3.92, 0.06, 0));
-
-        // النافذة
-        const wW = 2.2, wH = 1.6, fT = 0.1;
-        room.add(bx(wW + fT * 2, fT, 0.15, C.ward, 0, 2.55 + wH / 2, -2.93)); // أعلى
-        room.add(bx(wW + fT * 2, fT, 0.15, C.ward, 0, 2.55 - wH / 2, -2.93)); // أسفل
-        room.add(bx(fT, wH, 0.15, C.ward, wW / 2 + fT / 2, 2.55, -2.93));       // يمين
-        room.add(bx(fT, wH, 0.15, C.ward, -wW / 2 - fT / 2, 2.55, -2.93));     // يسار
-        // خط وسط النافذة
-        room.add(bx(wW, 0.04, 0.15, C.ward, 0, 2.55, -2.93));
-        // زجاج
-        const winGlass = bx(wW, (wH - 0.04) / 2, 0.02, C.win, 0, 2.55 + (wH - 0.04) / 4, -2.93);
-        const winGlass2 = bx(wW, (wH - 0.04) / 2, 0.02, C.win, 0, 2.55 - (wH - 0.04) / 4, -2.93);
-        room.add(winGlass); room.add(winGlass2);
-
-        // الباب
-        room.add(bx(0.15, 2.2, 0.9, C.ward, -3.93, 1.1, 1.5));
-        room.add(bx(0.07, 0.07, 0.2, C.lamp, -3.88, 1.05, 1.15));
-
-        // === السرير ===
-        room.add(bx(2.5, 0.35, 2.2, C.bed, 1.8, 0.175, -1.8, true));  // إطار
-        room.add(bx(2.5, 1.2, 0.12, C.bed, 1.8, 0.95, -2.85, true));   // لوحة رأس
-        room.add(bx(2.3, 0.15, 2.0, C.matt, 1.8, 0.425, -1.75));       // مرتبة
-        room.add(bx(0.7, 0.13, 0.4, C.pillow, 1.3, 0.565, -2.5));      // وسادة يمنى
-        room.add(bx(0.7, 0.13, 0.4, C.pillow, 2.3, 0.565, -2.5));      // وسادة يسرى
-        room.add(bx(2.1, 0.08, 1.3, C.blanket, 1.8, 0.54, -1.05));     // بطانية
-
-        // كنبة يمنى
-        room.add(bx(0.5, 0.55, 0.5, C.wood, 3.25, 0.275, -2.5, true));
-        // كنبة يسرى مع لمبة
-        room.add(bx(0.5, 0.55, 0.5, C.wood, 0.35, 0.275, -2.5, true));
-        room.add(bx(0.06, 0.3, 0.06, C.lamp, 0.35, 0.7, -2.5));         // عمود اللمبة
-        room.add(bx(0.22, 0.22, 0.22, C.shade, 0.35, 0.97, -2.5));     // أباجورة
-
-        // === المكتب ===
-        room.add(bx(1.6, 0.06, 0.7, C.wood, -2.2, 0.75, -2.6, true));
-        room.add(bx(0.06, 0.75, 0.06, C.wood, -2.9, 0.375, -2.3));
-        room.add(bx(0.06, 0.75, 0.06, C.wood, -1.5, 0.375, -2.3));
-        room.add(bx(0.06, 0.75, 0.06, C.wood, -2.9, 0.375, -2.9));
-        room.add(bx(0.06, 0.75, 0.06, C.wood, -1.5, 0.375, -2.9));
-
-        // === الكرسي ===
-        room.add(bx(0.5, 0.04, 0.5, C.dark, -2.2, 0.45, -1.85, true));  // مقعد
-        room.add(bx(0.5, 0.5, 0.04, C.dark, -2.2, 0.72, -2.1));         // ظهر
-        room.add(bx(0.04, 0.45, 0.04, C.dark, -2.4, 0.225, -2.05));
-        room.add(bx(0.04, 0.45, 0.04, C.dark, -2.0, 0.225, -2.05));
-        room.add(bx(0.04, 0.45, 0.04, C.dark, -2.4, 0.225, -1.65));
-        room.add(bx(0.04, 0.45, 0.04, C.dark, -2.0, 0.225, -1.65));
-
-        // تلفزيون على المكتب
-        room.add(bx(1.0, 0.6, 0.05, C.tv, -2.2, 1.08, -2.87));
-        room.add(bx(0.88, 0.48, 0.01, C.screen, -2.2, 1.08, -2.84));
-
-        // === خزانة الملابس ===
-        room.add(bx(0.8, 2.4, 1.5, C.ward, -3.5, 1.2, 0.8, true));
-        room.add(bx(0.02, 2.2, 0.02, C.lamp, -3.09, 1.2, 0.45)); // فاصل أبواب
-        room.add(bx(0.06, 0.06, 0.12, C.lamp, -3.07, 1.2, 0.45));
-        room.add(bx(0.06, 0.06, 0.12, C.lamp, -3.07, 1.2, 1.15));
-
-        // === السجادة ===
-        const rugG = new THREE.PlaneGeometry(2.8, 2.0);
-        const rug = new THREE.Mesh(rugG, new THREE.MeshLambertMaterial({ color: C.rug, flatShading: true }));
-        rug.rotation.x = -Math.PI / 2; rug.position.set(0.5, 0.008, 0.2); room.add(rug);
-
-        // === نبتة ===
-        room.add(bx(0.3, 0.35, 0.3, C.pot, 3.4, 0.175, 0.8));
-        const lvG = new THREE.SphereGeometry(Math.max(0.001, 0.38), 8, 6);
-        const lv = new THREE.Mesh(lvG, new THREE.MeshLambertMaterial({ color: C.plant, flatShading: true }));
-        lv.position.set(3.4, 0.58, 0.8); lv.castShadow = true; room.add(lv);
-
-        // === النقاط التفاعلية ===
-        const hsData = [
-            { p: [1.8, 1.3, -1.5], t: 'سرير كينج سايز', d: 'سرير فاخر بمرتبة طبية، بطانية كاشمير، ووسائد ذاكرة الشكل لراحة مثالية.' },
-            { p: [-2.2, 1.2, -2.3], t: 'منطقة المكتب', d: 'مكتب خشبي مع كرسي مريح وشاشة تلفزيون 55 بوصة للعمل والترفيه.' },
-            { p: [0, 2.5, -2.5], t: 'نافذة بانورامية', d: 'نافذة مزدوجة بإطلالة بحرية مباشرة مع ستائر تحكم بالضوء الطبيعي.' },
-            { p: [-3.5, 1.2, 0.8], t: 'خزانة ملابس', d: 'خزانة واسعة بأبواب مزدوجة، رفوف داخلية مضاءة، وأدراج سفلية.' },
-            { p: [0.35, 1.1, -2.5], t: 'طاولة جانبية', d: 'طاولة خشبية مع أباجورة دافئة قابلة للتعديل ومقبس شحن قريب.' },
-        ];
-        const hsGroup = new THREE.Group(); scene.add(hsGroup);
-        const hsMeshes = [];
-
-        hsData.forEach((h, i) => {
-            const sg = new THREE.SphereGeometry(Math.max(0.001, 0.1), 16, 12);
-            const sm = new THREE.MeshBasicMaterial({ color: 0xC8956C });
-            const sp = new THREE.Mesh(sg, sm); sp.position.set(...h.p);
-            sp.userData = { idx: i }; hsGroup.add(sp);
-            const rg = new THREE.RingGeometry(Math.max(0.001, 0.13), Math.max(0.002, 0.18), 24);
-            const rm = new THREE.MeshBasicMaterial({ color: 0xC8956C, side: THREE.DoubleSide, transparent: true, opacity: 0.45 });
-            const rn = new THREE.Mesh(rg, rm); rn.position.copy(sp.position); hsGroup.add(rn);
-            hsMeshes.push({ sp, rn });
-        });
-
-        // === خطوط الأبعاد ===
-        const dimG = new THREE.Group(); dimG.visible = false; scene.add(dimG);
-        function dimLine(a, b) {
-            const pts = [new THREE.Vector3(...a), new THREE.Vector3(...b)];
-            dimG.add(new THREE.Line(
-                new THREE.BufferGeometry().setFromPoints(pts),
-                new THREE.LineBasicMaterial({ color: C.dim })
-            ));
-            [a, b].forEach(p => {
-                const dg = new THREE.SphereGeometry(Math.max(0.001, 0.04), 8, 6);
-                const dm = new THREE.MeshBasicMaterial({ color: C.dim });
-                const dot = new THREE.Mesh(dg, dm); dot.position.set(...p); dimG.add(dot);
+        
+        function updateProgress() {
+            const list = document.getElementById('progressList');
+            list.innerHTML = '';
+            
+            rooms.forEach(room => {
+                const item = document.createElement('div');
+                item.className = 'progress-item';
+                item.innerHTML = `
+                    <div class="progress-dot ${visitedRooms.has(room.id) ? 'visited' : ''}"></div>
+                    <span>${room.name}</span>
+                `;
+                list.appendChild(item);
             });
         }
-        dimLine([-4, 0.02, -3.1], [4, 0.02, -3.1]);     // عرض
-        dimLine([-4.1, 0.02, -3], [-4.1, 0.02, 3]);       // طول
-        dimLine([-4.1, 0, 3.1], [-4.1, 3.5, 3.1]);        // ارتفاع
-
-        // === إعدادات الإضاءة حسب الوقت ===
-        const presets = {
-            morning:   { bg: 0xF0E8DA, amb: 0xFFF5E6, ai: 0.55, dir: 0xFFF0D0, di: 1.3, wi: 0.9,  wc: 0xD4E8F0, li: 0.2 },
-            afternoon: { bg: 0xE0D2BC, amb: 0xFFF0D0, ai: 0.45, dir: 0xFFD080, di: 1.1, wi: 0.7,  wc: 0xB8D4E3, li: 0.3 },
-            night:     { bg: 0x141428, amb: 0x222244, ai: 0.25, dir: 0x334488, di: 0.2, wi: 0.1,  wc: 0x223344, li: 0.8 },
-        };
-
-        let curTime = 'morning', showDim = false, showHs = true;
-
-        window.setTimeOfDay = (t) => {
-            curTime = t; const p = presets[t];
-            scene.background.setHex(p.bg);
-            amb.color.setHex(p.amb); amb.intensity = p.ai;
-            dir.color.setHex(p.dir); dir.intensity = p.di;
-            wLight.intensity = p.wi; wLight.color.setHex(p.wc);
-            lampLight.intensity = p.li;
-            winGlass.material.color.setHex(p.wc);
-            winGlass2.material.color.setHex(p.wc);
-            document.querySelectorAll('[data-time]').forEach(b => b.classList.toggle('active', b.dataset.time === t));
-        };
-
-        window.toggleDimensions = () => {
-            showDim = !showDim; dimG.visible = showDim;
-            document.getElementById('dimPanel').style.display = showDim ? 'block' : 'none';
-            document.getElementById('dimBtn').classList.toggle('active', showDim);
-        };
-
-        window.toggleHotspots = () => {
-            showHs = !showHs; hsGroup.visible = showHs;
-            document.getElementById('hsBtn').classList.toggle('active', showHs);
-            if (!showHs) document.getElementById('hsInfo').classList.remove('visible');
-        };
-
-        // === النقر على النقاط ===
-        const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
-        ren.domElement.addEventListener('click', e => {
-            if (!showHs) return;
-            const r = ren.domElement.getBoundingClientRect();
-            mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
-            mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
-            ray.setFromCamera(mouse, cam);
-            const hits = ray.intersectObjects(hsMeshes.map(h => h.sp));
-            if (hits.length) {
-                const d = hsData[hits[0].object.userData.idx];
-                document.getElementById('hsTitle').textContent = d.t;
-                document.getElementById('hsDesc').textContent = d.d;
-                document.getElementById('hsInfo').classList.add('visible');
+        
+        function drawMiniMap() {
+            const svg = document.getElementById('miniMapSvg');
+            svg.innerHTML = `
+                <rect class="mini-map-room" x="10" y="10" width="35" height="30" data-room="living"/>
+                <rect class="mini-map-room" x="55" y="10" width="35" height="30" data-room="bedroom"/>
+                <rect class="mini-map-room" x="10" y="50" width="35" height="25" data-room="kitchen"/>
+                <rect class="mini-map-room" x="55" y="50" width="35" height="25" data-room="bathroom"/>
+                <rect class="mini-map-room" x="10" y="80" width="80" height="15" data-room="balcony"/>
+            `;
+            
+            svg.querySelectorAll('.mini-map-room').forEach(rect => {
+                rect.addEventListener('click', () => {
+                    const roomId = rect.dataset.room;
+                    const index = rooms.findIndex(r => r.id === roomId);
+                    if (index !== -1) loadRoom(index);
+                });
+            });
+            
+            updateMiniMap();
+        }
+        
+        function updateMiniMap() {
+            const svg = document.getElementById('miniMapSvg');
+            const currentRoom = rooms[currentRoomIndex];
+            
+            svg.querySelectorAll('.mini-map-room').forEach(rect => {
+                rect.classList.remove('current');
+                if (rect.dataset.room === currentRoom.id) {
+                    rect.classList.add('current');
+                }
+            });
+            
+            let marker = svg.querySelector('.mini-map-marker');
+            if (!marker) {
+                marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                marker.setAttribute('class', 'mini-map-marker');
+                marker.setAttribute('r', '3');
+                svg.appendChild(marker);
+            }
+            
+            const currentRect = svg.querySelector(`[data-room="${currentRoom.id}"]`);
+            const x = parseFloat(currentRect.getAttribute('x')) + parseFloat(currentRect.getAttribute('width')) / 2;
+            const y = parseFloat(currentRect.getAttribute('y')) + parseFloat(currentRect.getAttribute('height')) / 2;
+            
+            marker.setAttribute('cx', x);
+            marker.setAttribute('cy', y);
+        }
+        
+        function drawPlanView() {
+            const svg = document.getElementById('planSvg');
+            svg.innerHTML = `
+                <rect class="plan-room" x="50" y="50" width="120" height="80" data-room="living"/>
+                <text class="plan-room-label" x="110" y="95">غرفة المعيشة</text>
+                
+                <rect class="plan-room" x="200" y="50" width="100" height="80" data-room="bedroom"/>
+                <text class="plan-room-label" x="250" y="95">غرفة النوم</text>
+                
+                <rect class="plan-room" x="50" y="150" width="120" height="70" data-room="kitchen"/>
+                <text class="plan-room-label" x="110" y="190">المطبخ</text>
+                
+                <rect class="plan-room" x="200" y="150" width="100" height="70" data-room="bathroom"/>
+                <text class="plan-room-label" x="250" y="190">الحمام</text>
+                
+                <rect class="plan-room" x="50" y="240" width="250" height="40" data-room="balcony"/>
+                <text class="plan-room-label" x="175" y="265">البلكونة</text>
+            `;
+            
+            svg.querySelectorAll('.plan-room').forEach(rect => {
+                rect.addEventListener('click', () => {
+                    const roomId = rect.dataset.room;
+                    const index = rooms.findIndex(r => r.id === roomId);
+                    if (index !== -1) {
+                        loadRoom(index);
+                        switchView('walk');
+                        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelector('[data-view="walk"]').classList.add('active');
+                    }
+                });
+            });
+        }
+        
+        function updateCompass(direction) {
+            document.getElementById('compassDirection').textContent = direction;
+        }
+        
+        function toggleAutoTour() {
+            autoTourActive = !autoTourActive;
+            const btn = document.getElementById('autoTourBtn');
+            
+            if (autoTourActive) {
+                btn.innerHTML = '<span>⏸</span><span>إيقاف الجولة</span>';
+                autoTourInterval = setInterval(() => {
+                    navigateRoom(1);
+                }, 5000);
             } else {
-                document.getElementById('hsInfo').classList.remove('visible');
+                btn.innerHTML = '<span>▶</span><span>جولة سينمائية</span>';
+                clearInterval(autoTourInterval);
             }
-        });
-
-        // === حلقة الرسم ===
-        const clock = new THREE.Clock();
-        (function loop() {
-            requestAnimationFrame(loop);
-            const t = clock.getElapsedTime();
-            hsMeshes.forEach((h, i) => {
-                const s = 1 + Math.sin(t * 2.2 + i * 1.2) * 0.25;
-                h.rn.scale.set(s, s, s);
-                h.rn.lookAt(cam.position);
-                h.sp.position.y = hsData[i].p[1] + Math.sin(t * 1.6 + i) * 0.06;
+        }
+        
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+        
+        function showDollhouse() {
+            alert('Dollhouse View - ميزة قيد التطوير');
+        }
+        
+        function handleKeyboard(e) {
+            if (e.key === 'ArrowLeft') navigateRoom(-1);
+            if (e.key === 'ArrowRight') navigateRoom(1);
+            if (e.key === 'f') toggleFullscreen();
+        }
+        
+        function initThreeJS() {
+            const canvas = document.getElementById('three-canvas');
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a1a);
+            
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 10);
+            
+            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 5);
+            scene.add(directionalLight);
+            
+            const floorGeometry = new THREE.PlaneGeometry(20, 15);
+            const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x3d3d3d });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            scene.add(floor);
+            
+            const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x4a4a4a });
+            
+            rooms.forEach((room, index) => {
+                const roomGeometry = new THREE.BoxGeometry(3, 2, 3);
+                const roomMaterial = new THREE.MeshStandardMaterial({ 
+                    color: index === 0 ? 0x3498db : 0x2d2d2d,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const roomMesh = new THREE.Mesh(roomGeometry, roomMaterial);
+                roomMesh.position.set((index - 2) * 4, 1, 0);
+                scene.add(roomMesh);
             });
-            ctrl.update();
-            ren.render(scene, cam);
-        })();
-
-        // === استجابة الحجم ===
-        const onResize = () => { cam.aspect = W() / H(); cam.updateProjectionMatrix(); ren.setSize(W(), H()); };
-        window.addEventListener('resize', onResize);
-        setTimeout(onResize, 150);
+            
+            function animate() {
+                requestAnimationFrame(animate);
+                renderer.render(scene, camera);
+            }
+            animate();
+            
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        init();
     </script>
 </body>
 </html>

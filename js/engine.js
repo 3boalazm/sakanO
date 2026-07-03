@@ -115,6 +115,7 @@ document.addEventListener('submit', function(e) {
   // ---------- الدرج الجانبي (تقسيم زي زاد) ----------
   const NAVSECS = [
     { items:[["home","الرئيسية","🏠"]] },
+    { title:"بيتنا", items:[["tour","جولة الشقة","🏡"]] },
     { title:"رحلتنا", items:[["journeys","قوائمنا","▶️"],["library","المكتبة","📚"],["myjourney","رحلتي","🌿"]] },
     { title:"الحوار والقرار", items:[["discussions","المناقشات","💬"],["decisionlog","القرارات","✅"],["charter","ميثاقنا","📜"]] },
     { title:"حياتنا", items:[["connect","تواصلنا","💞"],["quicknotes","مفكّرتنا","📝"],["tasks","المهام","🗒️"],["budget","الميزانية","💰"],["shopping","المشتريات","🛒"]] },
@@ -1177,7 +1178,8 @@ document.addEventListener('submit', function(e) {
   const ROUTES = { home:"index.html", journeys:"journeys.html", library:"library.html",
     discussions:"discussions.html", decisionlog:"decisions.html", connect:"connect.html",
     myjourney:"myjourney.html", charter:"charter.html", quicknotes:"notes.html",
-    tasks:"tasks.html", budget:"budget.html", shopping:"shopping.html", settings:"settings.html" };
+    tasks:"tasks.html", budget:"budget.html", shopping:"shopping.html",
+    settings:"settings.html", tour:"tour.html" };
   async function go(act, node){
     try{
       // تنقّل متعدّد الصفحات: روابط حقيقية بدل تبديل الـ view

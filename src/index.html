@@ -628,12 +628,18 @@
     { title:"رحلتنا", items:[["mutabaana","متابعتنا","📊"],["journeys","قوائمنا","▶️"],["library","المكتبة","📚"],["myjourney","رحلتي","🌿"]] },
     { title:"الحوار والقرار", items:[["discussions","المناقشات","💬"],["decisionlog","القرارات","✅"],["charter","ميثاقنا","📜"]] },
     { title:"حياتنا", items:[["connect","تواصلنا","💞"],["quicknotes","مفكّرتنا","📝"],["tasks","المهام","🗒️"],["budget","الميزانية","💰"],["shopping","المشتريات","🛒"]] },
+    { title:"يوم الخطوبة", items:[
+      ["eng_prep","الاستعداد المسبق","🗓️"],["eng_kit","حقيبة الطوارئ","🎒"],["eng_schedule","تنظيم اليوم والتوقيت","⏱️"],
+      ["eng_roles","توزيع المسؤوليات","🗂️"],["eng_photography","الكوشة والتصوير","📸"],["eng_communication","التواصل بينكم","💬"],
+      ["eng_mindset","الحالة النفسية","🧘"],["eng_opsroom","أفكار تنظيمية إضافية","💡"],["eng_incidents","احتياطات من كتاب الحوادث","⚠️"],
+      ["eng_lessons","ليتنا عرفنا هذا","🎓"],["eng_afterparty","ما بعد الحفل","🌙"],["eng_notes","ملاحظات أخيرة","📝"],
+    ] },
     { title:"الإعدادات", items:[["settings","الإعدادات","⚙️"],["logout","خروج","↩️"]] },
   ];
   function renderDrawer(){
     const d = document.getElementById("drawer"); if(!d) return;
     if(!S.token){ d.innerHTML=""; return; }
-    const cur = S.view;
+    const cur = S.view==="engagement" ? ("eng_"+(S.engSection||"prep")) : S.view;
     let html = `<div class="dw-head"><div class="dw-brand"><span class="brandlogo dw-logo"></span>سكن</div><button class="dw-x" data-dw="close" aria-label="إغلاق">✕</button></div>`;
     if(S.code) html += `<div class="dw-code">كود الميثاق: <b>${esc(S.code)}</b></div>`;
     html += `<div id="dwPresence" style="margin:6px 12px 2px;font-size:12.5px;line-height:1.75"></div>`;
@@ -862,6 +868,7 @@
     if(S.view==="budget") return renderBudget();
     if(S.view==="shopping") return renderShopping();
     if(S.view==="quicknotes") return renderQuickNotes();
+    if(S.view==="engagement") return renderEngagement();
     if(S.view==="myjourney")  return renderMyJourney();
     if(S.view==="mutabaana")  return renderMutabaana();
     if(S.view==="settings") return renderSettings();
@@ -2029,6 +2036,8 @@
     }
     // مفكّرة / ملاحظات
     if(r0 === 'quicknotes')     return { act:'nav', view:'quicknotes' };
+    // يوم الخطوبة
+    if(r0 === 'engagement' && r1){ return { act:'nav', view:'engagement', eng:r1 }; }
     // الإعدادات
     if(r0 === 'settings')       return { act:'nav', view:'settings' };
     return null; // مفيش تنقل (حذف / seed / presence / موضوع غير قابل للتنقل)
@@ -2318,6 +2327,65 @@
   }
 
   // ---------- actions ----------
+// ===== سكن · يوم الخطوبة (engagement day — قوائم تفاعلية قابلة للتعديل) =====
+// جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
+// كل موضوع (section) صفحة مستقلة في السايد بار، مش تابات متراكمة في صفحة واحدة.
+  const ENG_SECTIONS = [
+    { id:"prep",         title:"الاستعداد المسبق",         icon:"🗓️", intro:"قبل الخطوبة بيوم — مراجعة، بروفة، وراحة." },
+    { id:"kit",          title:"حقيبة الطوارئ",            icon:"🎒", intro:"المظهر والصحة — كل حاجة محتاجينها لو حصل أي طارئ." },
+    { id:"schedule",     title:"تنظيم اليوم والتوقيت",      icon:"⏱️", intro:"الأكل، الشرب، والجدول الزمني الواقعي." },
+    { id:"roles",        title:"توزيع المسؤوليات",         icon:"🗂️", intro:"مين مسؤول عن إيه، وميرجعش الكل للعروسين." },
+    { id:"photography",  title:"الكوشة والتصوير",          icon:"📸", intro:"إضاءة، رؤية، وإدارة السيشن." },
+    { id:"communication",title:"التواصل بينكم",            icon:"💬", intro:"اتفاقات بسيطة تحمي مزاجكم مع بعض طول اليوم." },
+    { id:"mindset",      title:"الحالة النفسية",           icon:"🧘", intro:"الهدوء والدعم النفسي المتبادل." },
+    { id:"opsroom",      title:"أفكار تنظيمية إضافية",     icon:"💡", intro:"لمسات بسيطة بتدي انطباع تنظيم من أول لحظة." },
+    { id:"incidents",    title:"احتياطات من كتاب الحوادث", icon:"⚠️", intro:"دروس من مواقف حقيقية — وقاية بدل ما نتفاجأ." },
+    { id:"lessons",      title:"ليتنا عرفنا هذا",          icon:"🎓", intro:"تكات خبرة من عرسان قبلنا." },
+    { id:"afterparty",   title:"ما بعد الحفل",             icon:"🌙", intro:"إجراءات وحالة نفسية بعد ما الحفل يخلص." },
+    { id:"notes",        title:"ملاحظات أخيرة",            icon:"📝", intro:"قبل ما تقفلوا القايمة." },
+  ];
+  function engMeta(id){ return ENG_SECTIONS.find(x=>x.id===id) || ENG_SECTIONS[0]; }
+  const ENG_STATE_NEXT = { pending:"done", done:"skip", skip:"pending" };
+  const ENG_STATE_ICON = { pending:"○", done:"✓", skip:"✗" };
+  const ENG_STATE_LABEL = { pending:"لسه", done:"اتعمل", skip:"مش هيتعمل" };
+
+  async function renderEngagement(){
+    S.view="engagement"; S.resourceId=null;
+    const m = engMeta(S.engSection || "prep"); S.engSection = m.id;
+    el.innerHTML = `
+      <div class="eng-nav" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        ${ENG_SECTIONS.map(x=>`<button class="btn sm ${x.id===m.id?'':'ghost'}" data-act="eng_${x.id}">${x.icon} ${esc(x.title)}</button>`).join("")}
+      </div>
+      ${pageTitle(m.icon+" "+m.title, m.intro)}
+      <div class="card tight"><div class="row"><label>إضافة عنصر جديد</label><input id="engNewText" type="text" placeholder="اكتبوا اللي عايزين تضيفوه…"></div>
+        <button class="btn" data-act="engAdd">أضِف</button></div>
+      <div id="engList" style="margin-top:12px"><div class="empty">…تحميل</div></div>`;
+    await reloadEngagement();
+    const inp = document.getElementById("engNewText");
+    if(inp) inp.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); go("engAdd", inp); } });
+  }
+  async function reloadEngagement(){
+    const list = document.getElementById("engList"); if(!list) return;
+    try{
+      const items = await api("GET","/engagement/"+encodeURIComponent(S.engSection));
+      list.innerHTML = items.length ? items.map(it=>{
+        const st = it.state||"pending";
+        const cls = st==="done" ? "" : (st==="skip" ? "ghost" : "ghost");
+        const strike = st==="done" ? "text-decoration:line-through;opacity:.65" : (st==="skip" ? "text-decoration:line-through;opacity:.4" : "");
+        const dot = st==="done" ? "#36c46f" : (st==="skip" ? "#c0392b" : "var(--muted)");
+        return `<div class="card tight"><div class="actions" style="justify-content:space-between;align-items:flex-start">
+          <div style="display:flex;align-items:flex-start;gap:10px;min-width:0">
+            <button class="btn ${cls} sm" style="flex:none;color:${st==='pending'?'':'#fff'};${st==='done'?'background:#36c46f;border-color:#36c46f':''}${st==='skip'?'background:#c0392b;border-color:#c0392b':''}" data-act="engCycle" data-id="${esc(it.id)}" data-state="${st}" title="${ENG_STATE_LABEL[st]} — دوس تغيّر الحالة">${ENG_STATE_ICON[st]}</button>
+            <span style="${strike};min-width:0;word-break:break-word">${esc(it.text)}</span>
+          </div>
+          <div style="display:flex;gap:10px;flex:none">
+            <button class="linkbtn" data-act="engEdit" data-id="${esc(it.id)}" data-text="${esc(it.text)}">تعديل</button>
+            <button class="linkbtn" data-act="engDel" data-id="${esc(it.id)}">حذف</button>
+          </div>
+        </div></div>`;
+      }).join("") : `<div class="empty">القايمة فاضية. ضيفوا أول عنصر ليها.</div>`;
+    }catch(e){ list.innerHTML = `<div class="empty">${esc(errMsg(e))}</div>`; }
+  }
   async function go(act, node){
     try{
       if(act==="authMode"){ S.authMode=node.dataset.m; renderOnboarding(); return; }
@@ -2356,6 +2424,25 @@
         toast("انضممت إلى الميثاق"); return;
       }
       if(act==="logout") return logout();
+      if(act && act.indexOf("eng_")===0){ S.view="engagement"; S.engSection=act.slice(4); render(); return; }
+      if(act==="engAdd"){
+        const inp=document.getElementById("engNewText"); const text=((inp&&inp.value)||"").trim();
+        if(!text) return toast("اكتبوا العنصر الأول");
+        await api("POST","/engagement/"+encodeURIComponent(S.engSection),{text});
+        if(inp) inp.value=""; await reloadEngagement(); return;
+      }
+      if(act==="engCycle"){
+        const cur=node.dataset.state||"pending"; const next=ENG_STATE_NEXT[cur]||"pending";
+        await api("PUT","/engagement/"+node.dataset.id+"/state",{state:next}); await reloadEngagement(); return;
+      }
+      if(act==="engEdit"){
+        const v=prompt("عدّل النص:", node.dataset.text||""); if(v==null) return;
+        const t=v.trim(); if(!t) return toast("النص متسيبش فاضي");
+        await api("PUT","/engagement/"+node.dataset.id,{text:t}); await reloadEngagement(); return;
+      }
+      if(act==="engDel"){
+        await api("POST","/engagement/"+node.dataset.id+"/delete"); await reloadEngagement(); return;
+      }
       if(act==="library"){ S.view="library"; S.tab="summary"; render(); return; }
 
       if(act==="setProg"){ await api("PUT","/resources/"+S.resourceId+"/progress",{ status:node.dataset.val }); renderResource(); return; }
@@ -2639,7 +2726,7 @@
       try{
         const d = JSON.parse(jItem.dataset.jdest);
         if(d.act==="resource"){ S.resourceId=d.rid; S.tab=d.tab||"summary"; render(); return; }
-        if(d.act==="nav"){ S.view=d.view; render(); return; }
+        if(d.act==="nav"){ if(d.view==="engagement" && d.eng) S.engSection=d.eng; S.view=d.view; render(); return; }
       }catch(_){}
       return;
     }

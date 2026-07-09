@@ -4,12 +4,18 @@
     { title:"رحلتنا", items:[["mutabaana","متابعتنا","📊"],["journeys","قوائمنا","▶️"],["library","المكتبة","📚"],["myjourney","رحلتي","🌿"]] },
     { title:"الحوار والقرار", items:[["discussions","المناقشات","💬"],["decisionlog","القرارات","✅"],["charter","ميثاقنا","📜"]] },
     { title:"حياتنا", items:[["connect","تواصلنا","💞"],["quicknotes","مفكّرتنا","📝"],["tasks","المهام","🗒️"],["budget","الميزانية","💰"],["shopping","المشتريات","🛒"]] },
+    { title:"يوم الخطوبة", items:[
+      ["eng_prep","الاستعداد المسبق","🗓️"],["eng_kit","حقيبة الطوارئ","🎒"],["eng_schedule","تنظيم اليوم والتوقيت","⏱️"],
+      ["eng_roles","توزيع المسؤوليات","🗂️"],["eng_photography","الكوشة والتصوير","📸"],["eng_communication","التواصل بينكم","💬"],
+      ["eng_mindset","الحالة النفسية","🧘"],["eng_opsroom","أفكار تنظيمية إضافية","💡"],["eng_incidents","احتياطات من كتاب الحوادث","⚠️"],
+      ["eng_lessons","ليتنا عرفنا هذا","🎓"],["eng_afterparty","ما بعد الحفل","🌙"],["eng_notes","ملاحظات أخيرة","📝"],
+    ] },
     { title:"الإعدادات", items:[["settings","الإعدادات","⚙️"],["logout","خروج","↩️"]] },
   ];
   function renderDrawer(){
     const d = document.getElementById("drawer"); if(!d) return;
     if(!S.token){ d.innerHTML=""; return; }
-    const cur = S.view;
+    const cur = S.view==="engagement" ? ("eng_"+(S.engSection||"prep")) : S.view;
     let html = `<div class="dw-head"><div class="dw-brand"><span class="brandlogo dw-logo"></span>سكن</div><button class="dw-x" data-dw="close" aria-label="إغلاق">✕</button></div>`;
     if(S.code) html += `<div class="dw-code">كود الميثاق: <b>${esc(S.code)}</b></div>`;
     html += `<div id="dwPresence" style="margin:6px 12px 2px;font-size:12.5px;line-height:1.75"></div>`;

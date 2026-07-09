@@ -35,6 +35,7 @@
     if(S.view==="budget") return renderBudget();
     if(S.view==="shopping") return renderShopping();
     if(S.view==="quicknotes") return renderQuickNotes();
+    if(S.view==="engagement") return renderEngagement();
     if(S.view==="myjourney")  return renderMyJourney();
     if(S.view==="mutabaana")  return renderMutabaana();
     if(S.view==="settings") return renderSettings();

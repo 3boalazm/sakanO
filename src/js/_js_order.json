@@ -22,5 +22,6 @@
   "views/18-discussions.js",
   "views/19-decisionlog.js",
   "views/20-connect-charter.js",
+  "views/21-engagement.js",
   "05-app-main.js"
 ]

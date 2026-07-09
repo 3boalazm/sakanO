@@ -47,6 +47,8 @@
     }
     // مفكّرة / ملاحظات
     if(r0 === 'quicknotes')     return { act:'nav', view:'quicknotes' };
+    // يوم الخطوبة
+    if(r0 === 'engagement' && r1){ return { act:'nav', view:'engagement', eng:r1 }; }
     // الإعدادات
     if(r0 === 'settings')       return { act:'nav', view:'settings' };
     return null; // مفيش تنقل (حذف / seed / presence / موضوع غير قابل للتنقل)

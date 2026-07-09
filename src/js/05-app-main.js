@@ -36,6 +36,25 @@
         toast("انضممت إلى الميثاق"); return;
       }
       if(act==="logout") return logout();
+      if(act && act.indexOf("eng_")===0){ S.view="engagement"; S.engSection=act.slice(4); render(); return; }
+      if(act==="engAdd"){
+        const inp=document.getElementById("engNewText"); const text=((inp&&inp.value)||"").trim();
+        if(!text) return toast("اكتبوا العنصر الأول");
+        await api("POST","/engagement/"+encodeURIComponent(S.engSection),{text});
+        if(inp) inp.value=""; await reloadEngagement(); return;
+      }
+      if(act==="engCycle"){
+        const cur=node.dataset.state||"pending"; const next=ENG_STATE_NEXT[cur]||"pending";
+        await api("PUT","/engagement/"+node.dataset.id+"/state",{state:next}); await reloadEngagement(); return;
+      }
+      if(act==="engEdit"){
+        const v=prompt("عدّل النص:", node.dataset.text||""); if(v==null) return;
+        const t=v.trim(); if(!t) return toast("النص متسيبش فاضي");
+        await api("PUT","/engagement/"+node.dataset.id,{text:t}); await reloadEngagement(); return;
+      }
+      if(act==="engDel"){
+        await api("POST","/engagement/"+node.dataset.id+"/delete"); await reloadEngagement(); return;
+      }
       if(act==="library"){ S.view="library"; S.tab="summary"; render(); return; }
 
       if(act==="setProg"){ await api("PUT","/resources/"+S.resourceId+"/progress",{ status:node.dataset.val }); renderResource(); return; }
@@ -319,7 +338,7 @@
       try{
         const d = JSON.parse(jItem.dataset.jdest);
         if(d.act==="resource"){ S.resourceId=d.rid; S.tab=d.tab||"summary"; render(); return; }
-        if(d.act==="nav"){ S.view=d.view; render(); return; }
+        if(d.act==="nav"){ if(d.view==="engagement" && d.eng) S.engSection=d.eng; S.view=d.view; render(); return; }
       }catch(_){}
       return;
     }

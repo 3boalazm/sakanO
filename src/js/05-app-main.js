@@ -36,11 +36,16 @@
         toast("انضممت إلى الميثاق"); return;
       }
       if(act==="logout") return logout();
-      if(act && act.indexOf("eng_")===0){ S.view="engagement"; S.engSection=act.slice(4); render(); return; }
+      if(act==="engagement"){ S.view="engagement"; render(); return; }
+      if(act==="engMode"){ S.engMode=node.dataset.mode; renderEngagementBody(); return; }
+      if(act==="engFilter"){ S.engFilter=node.dataset.f; renderEngagementBody(); return; }
+      if(act==="engNext"){ engScrollToNextPending(); return; }
       if(act==="engAdd"){
         const inp=document.getElementById("engNewText"); const text=((inp&&inp.value)||"").trim();
         if(!text) return toast("اكتبوا العنصر الأول");
-        await api("POST","/engagement/"+encodeURIComponent(S.engSection),{text});
+        const sec=(document.getElementById("engNewSection")||{}).value || "prep";
+        const owner=(document.getElementById("engNewOwner")||{}).value || "both";
+        await api("POST","/engagement/"+encodeURIComponent(sec),{text,owner});
         if(inp) inp.value=""; await reloadEngagement(); return;
       }
       if(act==="engCycle"){
@@ -338,7 +343,7 @@
       try{
         const d = JSON.parse(jItem.dataset.jdest);
         if(d.act==="resource"){ S.resourceId=d.rid; S.tab=d.tab||"summary"; render(); return; }
-        if(d.act==="nav"){ if(d.view==="engagement" && d.eng) S.engSection=d.eng; S.view=d.view; render(); return; }
+        if(d.act==="nav"){ S.view=d.view; render(); return; }
       }catch(_){}
       return;
     }

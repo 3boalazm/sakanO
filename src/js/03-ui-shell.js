@@ -4,18 +4,13 @@
     { title:"رحلتنا", items:[["mutabaana","متابعتنا","📊"],["journeys","قوائمنا","▶️"],["library","المكتبة","📚"],["myjourney","رحلتي","🌿"]] },
     { title:"الحوار والقرار", items:[["discussions","المناقشات","💬"],["decisionlog","القرارات","✅"],["charter","ميثاقنا","📜"]] },
     { title:"حياتنا", items:[["connect","تواصلنا","💞"],["quicknotes","مفكّرتنا","📝"],["tasks","المهام","🗒️"],["budget","الميزانية","💰"],["shopping","المشتريات","🛒"]] },
-    { title:"يوم الخطوبة", items:[
-      ["eng_prep","الاستعداد المسبق","🗓️"],["eng_kit","حقيبة الطوارئ","🎒"],["eng_schedule","تنظيم اليوم والتوقيت","⏱️"],
-      ["eng_roles","توزيع المسؤوليات","🗂️"],["eng_photography","الكوشة والتصوير","📸"],["eng_communication","التواصل بينكم","💬"],
-      ["eng_mindset","الحالة النفسية","🧘"],["eng_opsroom","أفكار تنظيمية إضافية","💡"],["eng_incidents","احتياطات من كتاب الحوادث","⚠️"],
-      ["eng_lessons","ليتنا عرفنا هذا","🎓"],["eng_afterparty","ما بعد الحفل","🌙"],["eng_notes","ملاحظات أخيرة","📝"],
-    ] },
+    { title:"يوم الخطوبة", items:[["engagement","يوم الخطوبة","💍"]] },
     { title:"الإعدادات", items:[["settings","الإعدادات","⚙️"],["logout","خروج","↩️"]] },
   ];
   function renderDrawer(){
     const d = document.getElementById("drawer"); if(!d) return;
     if(!S.token){ d.innerHTML=""; return; }
-    const cur = S.view==="engagement" ? ("eng_"+(S.engSection||"prep")) : S.view;
+    const cur = S.view;
     let html = `<div class="dw-head"><div class="dw-brand"><span class="brandlogo dw-logo"></span>سكن</div><button class="dw-x" data-dw="close" aria-label="إغلاق">✕</button></div>`;
     if(S.code) html += `<div class="dw-code">كود الميثاق: <b>${esc(S.code)}</b></div>`;
     html += `<div id="dwPresence" style="margin:6px 12px 2px;font-size:12.5px;line-height:1.75"></div>`;
@@ -119,6 +114,7 @@
       "wishes":{ic:"🌠",tx:"أضافت أمنية",target:"connect"}, "gratitude":{ic:"🤲",tx:"أضافت امتنانًا",target:"connect"},
       "safespace":{ic:"🕊️",tx:"أضافت لصندوق التفاهم",target:"connect"}, "keys":{ic:"🗝️",tx:"أضافت مفتاحًا",target:"connect"},
       "mood":{ic:"🌤️",tx:"حدّثت مزاجها",target:"connect"}, "focus":{ic:"📌",tx:"غيّرت مادتكم الحالية",target:"home"},
+      "engagement":{ic:"💍",tx:"حدّثت قايمة يوم الخطوبة",target:"engagement"},
     };
     const m = M[k] || M[p[0]] || {ic:"🔔",tx:"عملت تحديث",target:"home"};
     return { ic:m.ic, tx:`${who} ${m.tx}`+(it.title?` · ${it.title}`:""), target:m.target, res:it.resourceId };

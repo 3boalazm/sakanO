@@ -12,7 +12,7 @@
         const pw=(document.getElementById("pwL").value||"");
         if(!email||!pw) return toast("اكتب الإيميل والباسوورد");
         const out = await api("POST","/login",{ email, password:pw });
-        S.token=out.token; S.code=out.pairCode||null; S.name=out.displayName||null; S.email=email; save(); S.view="home"; render();
+        S.token=out.token; S.code=out.pairCode||null; S.name=out.displayName||null; S.email=email; save(); landingAfterAuth(); render();
         toast("أهلًا بيك تاني 🌿"); return;
       }
       if(act==="create"){
@@ -21,7 +21,7 @@
         const pw=(document.getElementById("pwC").value||"");
         if(!email||!pw) return toast("اكتب الإيميل والباسوورد");
         const out = await api("POST","/pair",{ email, password:pw, displayName:name||"أنا" });
-        S.token=out.token; S.code=out.pairCode; S.name=out.displayName||name; S.email=email; save(); S.view="home"; render();
+        S.token=out.token; S.code=out.pairCode; S.name=out.displayName||name; S.email=email; save(); landingAfterAuth(); render();
         toast("تم إنشاء الميثاق — شارك الكود "+out.pairCode); return;
       }
       if(act==="join"){
@@ -32,7 +32,7 @@
         if(!code) return toast("أدخل الكود");
         if(!email||!pw) return toast("اكتب الإيميل والباسوورد");
         const out = await api("POST","/pair/join",{ code, email, password:pw, displayName:name||"أنا" });
-        S.token=out.token; S.code=out.pairCode||null; S.name=out.displayName||name; S.email=email; save(); S.view="home"; render();
+        S.token=out.token; S.code=out.pairCode||null; S.name=out.displayName||name; S.email=email; save(); landingAfterAuth(); render();
         toast("انضممت إلى الميثاق"); return;
       }
       if(act==="logout") return logout();
@@ -181,7 +181,7 @@
         // Skip without setting PIN — go straight home
         localStorage.removeItem(PIN_KEY); localStorage.removeItem(PIN_WHO);
         document.body.classList.remove("pre-auth");
-        S.pinStep="lock"; S.view="home"; render(); return;
+        S.pinStep="lock"; landingAfterAuth(); render(); return;
       }
       if(act==="pinForgot"){
         if(!confirm("هتتطلع من الجلسة وتعيد تسجيل الدخول — تكمل؟")) return;
@@ -365,7 +365,15 @@
   });
 
   // زر الرجوع (back) أو جيتشر الرجوع يقفل الشات العائم بدل ما يطلّع من التطبيق
-  window.addEventListener("popstate",()=>{ if(S.fabOpen) closeFab(true); });
+  window.addEventListener("popstate",()=>{
+    if(S.fabOpen){ closeFab(true); return; }
+    if(!S.token || S.view==="pinlock" || S.view==="onboarding") return;
+    const r = parseHash() || { view:"home" };
+    if(r.view!==S.view || (r.resourceId||null)!==S.resourceId){
+      S.view = r.view; S.resourceId = r.resourceId||null; S.tab = r.tab||"summary";
+      render();
+    }
+  });
 
   document.getElementById("foot").innerHTML = "سكن · مساحتنا إحنا الاتنين — خاصّة بطبيعتها، من غير مشاركة عامة.";
 

@@ -115,12 +115,12 @@
       }
       localStorage.setItem(PIN_KEY, pinHash(pin));
       document.body.classList.remove("pre-auth");
-      S.pinStep="lock"; S.view="home"; render(); return;
+      S.pinStep="lock"; landingAfterAuth(); render(); return;
     }
     if(step==="lock"){
       if(pinCorrect(pin)){
         document.body.classList.remove("pre-auth");
-        S.pinStep="lock"; S.view="home"; render(); return;
+        S.pinStep="lock"; landingAfterAuth(); render(); return;
       }
       pinShakeDots();
       const e=document.getElementById("pinErr"); if(e) e.textContent="كود غلط — حاول تاني";

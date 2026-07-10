@@ -13,12 +13,20 @@
   let _rcMsgs = [];      // آخر رسائل دردشة المورد المحمّلة
   let _fabPoll = null;   // الشات العائم: مؤقّت التحديث الحيّ
   let _fabHist = false;  // الشات العائم: هل دفعنا حالة في الـ history (لزر الباك)
+  function syncHash(){
+    if(!S.token || S.view==="pinlock" || S.view==="onboarding") return;
+    const wanted = hashFor(S.view, S.resourceId, S.tab);
+    if(location.hash !== wanted){
+      try{ history.pushState(null, "", wanted); }catch(_){}
+    }
+  }
   function render(){
     if(_mtbPoll){ clearInterval(_mtbPoll); _mtbPoll=null; }   // أي تنقّل يوقف الـ polling
     if(_chatPoll){ clearInterval(_chatPoll); _chatPoll=null; }
     if(_rcPoll){ clearInterval(_rcPoll); _rcPoll=null; }
     closeNotif();
     renderBar();
+    syncHash();
     document.body.classList.toggle("pre-auth", !S.token || S.view==="pinlock");
     if(S.view==="pinlock") return renderPinLock();
     if(!S.token){ closeFab(); return renderOnboarding(); }

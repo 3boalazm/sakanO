@@ -23,5 +23,6 @@
   "views/19-decisionlog.js",
   "views/20-connect-charter.js",
   "views/21-engagement.js",
+  "views/22-countdown.js",
   "05-app-main.js"
 ]

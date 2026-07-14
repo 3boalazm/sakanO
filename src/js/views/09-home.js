@@ -3,11 +3,13 @@
   async function renderHome(){
     S.view="home"; S.resourceId=null;
     el.innerHTML = greetHero()
+      + countdownWidgetHtml()
       + `<div id="focusBox"></div>`
       + `<div class="card tight"><div class="eyebrow">نعمة النهارده</div>
           <div class="row" style="margin-top:4px"><input id="homeGrat" type="text" placeholder="نعمة من بيتنا نشكر الله عليها…"></div>
           <div class="actions"><span class="spacer"></span><button class="btn sm" data-act="addGratHome">أضِف للامتنان</button></div></div>`
       + `<div id="loops"><div class="empty">…تحميل</div></div>`;
+    startCountdownTicker();
     try{
       const [items, foc] = await Promise.all([api("GET","/resources"), api("GET","/focus")]);
       const fb = document.getElementById("focusBox");

@@ -24,6 +24,7 @@
     if(_mtbPoll){ clearInterval(_mtbPoll); _mtbPoll=null; }   // أي تنقّل يوقف الـ polling
     if(_chatPoll){ clearInterval(_chatPoll); _chatPoll=null; }
     if(_rcPoll){ clearInterval(_rcPoll); _rcPoll=null; }
+    stopCountdownTicker();
     closeNotif();
     renderBar();
     syncHash();

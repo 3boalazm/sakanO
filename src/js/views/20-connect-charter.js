@@ -88,6 +88,10 @@
 
         <div class="card"><div class="eyebrow">رسالة للمستقبل</div>
           <p class="muted" style="margin-top:-6px;font-size:13px">اكتب رسالة لشريكك: تظهرله تلقائيًا بعد تاريخ تختاره، أو تفضل مختومة لحد ما تبعتها بنفسك.</p>
+          <div class="actions" style="flex-wrap:wrap;gap:8px;margin:6px 0 4px">
+            <span class="pill warn">💌 شريكك كتبلك ${caps.filter(c=>!c.mine).length} رسالة</span>
+            <span class="pill">✍️ انت كتبت ${caps.filter(c=>c.mine).length} رسالة</span>
+          </div>
           <div class="row"><textarea id="capContent" placeholder="رسالة لنا بعد سنة…"></textarea></div>
           <div class="row"><label>طريقة الفتح</label>
             <div class="themesw" id="capMode" role="group" style="border-radius:12px">

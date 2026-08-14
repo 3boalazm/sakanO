@@ -2,6 +2,7 @@
 // جزء من الـ IIFE المشترك (لا import/export). الترتيب محفوظ في js/_js_order.json
   const MOOD_OPT = [["great","😍 رائعة"],["good","🙂 جيدة"],["ok","😐 عادية"],["low","😟 متعبة"]];
   const moodLabel = (v)=> (MOOD_OPT.find(m=>m[0]===v)||["","—"])[1];
+  const capDate = (ts)=> ts? new Date(ts).toLocaleDateString("ar-EG",{day:"numeric",month:"short",year:"numeric"}) : "";
   async function renderCharter(){
     S.view="charter"; S.resourceId=null;
     el.innerHTML = pageTitle("ميثاقنا","اتفاقاتنا الثابتة اللي نرجعلها وقت الحاجة — من قلبنا ومن منهجنا.") + `<div id="chBody"><div class="empty">…تحميل</div></div>`;
@@ -101,7 +102,8 @@
           <div class="actions"><span class="spacer"></span><button class="btn sm" data-act="addCapsule">اختِم الرسالة</button></div>
           ${caps.length? caps.map(c=>`<div class="card tight" style="margin-top:8px">
             <div class="actions" style="justify-content:space-between"><span class="pill ${c.mine?'':'warn'}">${c.mine?'رسالتك':'رسالة شريكك'}</span>${c.openDate?`<span class="pill">📅 ${esc(c.openDate)}</span>`:(c.manual?`<span class="pill">✋ تتبعت يدوي</span>`:"")}</div>
-            <p style="margin:8px 0 0">${c.sealed?'<span class="muted">🔒 مختومة.</span>':esc(c.content)}</p>
+            ${c.createdAt?`<p class="muted" style="margin:6px 0 0;font-size:12px">✍️ ${esc(capDate(c.createdAt))}</p>`:""}
+            <p style="margin:6px 0 0;white-space:pre-wrap;word-break:break-word">${c.sealed?'<span class="muted">🔒 مختومة.</span>':esc(c.content)}</p>
             ${c.canOpen?`<div class="actions" style="margin-top:8px;flex-wrap:wrap;gap:6px">
               <button class="linkbtn" data-act="delCapsule" data-id="${esc(c.id)}">حذف</button>
               <button class="linkbtn" data-act="convCapsule" data-id="${esc(c.id)}" data-to="${c.manual?'date':'manual'}">${c.manual?'حوّلها لفتح بتاريخ':'خلّيها مختومة (أبعتها بنفسي)'}</button>

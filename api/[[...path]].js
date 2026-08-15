@@ -28,12 +28,13 @@ export default async function handler(req, res) {
   res.setHeader('access-control-allow-headers', 'authorization, content-type');
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
 
-  const pathname = '/' + (Array.isArray(req.query.path) ? req.query.path.join('/') : req.query.path || '');
-
-  if (String(req.url || '').includes('__debug')) {
-    res.status(200).json({ query: req.query, url: req.url, pathname, headers: req.headers });
-    return;
-  }
+  // req.url reflects the path actually routed to this function (post-rewrite),
+  // so parse it directly instead of relying on req.query.path — the vercel.json
+  // catch-all rewrite ("/(.*)" -> "/api/$1") does not reliably populate the
+  // dynamic route param for the destination, which was causing every static
+  // asset (sw.js, manifest.json, icons) to 404 and the rest to fall through
+  // to the API handler as an unauthenticated request.
+  const pathname = String(req.url || '/').split('?')[0].replace(/^(?:\/api)+(?=\/|$)/, '') || '/';
 
   // Serve PWA static assets
   if (ASSETS[pathname]) {
@@ -60,9 +61,8 @@ export default async function handler(req, res) {
     return;
   }
 
-  // API routes — strip 'api' prefix if present (from passthrough rewrites)
-  let path = [].concat(req.query.path || []);
-  if (path[0] === 'api') path = path.slice(1);
+  // API routes
+  const path = pathname.split('/').filter(Boolean);
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '') || null;
   const body = (req.body && typeof req.body === 'object') ? req.body : {};
   const { status, body: out } = await handle({ method: req.method, path, body, token });

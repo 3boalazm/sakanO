@@ -30,8 +30,8 @@ export default async function handler(req, res) {
 
   const pathname = '/' + (Array.isArray(req.query.path) ? req.query.path.join('/') : req.query.path || '');
 
-  if (pathname === '/__debug') {
-    res.status(200).json({ query: req.query, url: req.url, pathname });
+  if (String(req.url || '').includes('__debug')) {
+    res.status(200).json({ query: req.query, url: req.url, pathname, headers: req.headers });
     return;
   }
 

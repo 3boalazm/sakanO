@@ -23,6 +23,10 @@ const ASSETS = {
 
 
 export default async function handler(req, res) {
+  if (req.url && req.url.split('?')[0].replace(/\/+$/, '') === '/__build_check_v2') {
+    res.status(200).json({ marker: 'v2-req-url-fix', url: req.url, method: req.method });
+    return;
+  }
   res.setHeader('access-control-allow-origin', '*');
   res.setHeader('access-control-allow-methods', 'GET,POST,PUT,OPTIONS');
   res.setHeader('access-control-allow-headers', 'authorization, content-type');

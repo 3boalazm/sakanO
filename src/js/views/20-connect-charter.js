@@ -98,7 +98,7 @@
             <div class="themesw" id="capMode" role="group" style="border-radius:12px">
               <button type="button" data-act="capMode" data-mode="date" class="on" style="width:auto;padding:6px 12px">بتاريخ</button>
               <button type="button" data-act="capMode" data-mode="manual" style="width:auto;padding:6px 12px">أبعتها بنفسي</button></div></div>
-          <div class="row" id="capDateWrap"><label>تاريخ الفتح (اختياري)</label><input id="capDate" type="text" placeholder="2027-06-01"></div>
+          <div class="row" id="capDateWrap"><label>تاريخ الفتح (اختياري)</label><input id="capDate" type="date"></div>
           <div class="actions"><span class="spacer"></span><button class="btn sm" data-act="addCapsule">اختِم الرسالة</button></div>
           ${caps.length? caps.map(c=>`<div class="card tight" style="margin-top:8px">
             <div class="actions" style="justify-content:space-between"><span class="pill ${c.mine?'':'warn'}">${c.mine?'رسالتك':'رسالة شريكك'}</span>${c.openDate?`<span class="pill">📅 ${esc(c.openDate)}</span>`:(c.manual?`<span class="pill">✋ تتبعت يدوي</span>`:"")}</div>

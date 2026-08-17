@@ -369,9 +369,9 @@
   .pin-dot.fill{ background:linear-gradient(135deg,#c9a14a,#e6c97a); border-color:#e6c97a; box-shadow:0 0 10px rgba(201,161,74,.5); }
   .pin-dot.shake{ animation:pinShake .4s cubic-bezier(.36,.07,.19,.97) both; }
   @keyframes pinShake{ 10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)} 30%,50%,70%{transform:translateX(-4px)} 40%,60%{transform:translateX(4px)} }
-  .pin-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-  .pin-key{ border:none; border-radius:16px; padding:16px 10px; font-family:'ThmanyahSerifDisplay',serif; font-size:24px; font-weight:700; cursor:pointer; transition:all .12s;
-    background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.12); color:#fff; }
+  .pin-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; justify-items:center; }
+  .pin-key{ width:100%; max-width:76px; aspect-ratio:1; border:none; border-radius:16px; padding:0; font-family:'ThmanyahSerifDisplay',serif; font-size:24px; font-weight:700; cursor:pointer; transition:all .12s;
+    background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.12); color:#fff; display:flex; align-items:center; justify-content:center; }
   .pin-key:active{ transform:scale(.93); background:rgba(201,161,74,.35); }
   .pin-key.del{ font-family:inherit; font-size:18px; }
   .pin-key.ok{ background:linear-gradient(135deg,#c9a14a,#2a7a5f); color:#fff; font-family:inherit; font-size:15px; font-weight:800; letter-spacing:.03em; }

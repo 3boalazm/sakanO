@@ -1,6 +1,5 @@
 import { handle } from '../lib/handler.js';
 import { PAGE } from '../lib/page.js';
-import { APARTMENT_TOUR } from '../lib/apartment.js';
 import { ASSETS } from '../lib/assets.js';
 
 export default async function handler(req, res) {
@@ -28,8 +27,9 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Serve apartment tour static page
+  // Serve apartment tour static page (lazy: 3.6MB, only needed for this one route)
   if (req.method === 'GET' && pathname === '/apartment-tour-v6.html') {
+    const { APARTMENT_TOUR } = await import('../lib/apartment.js');
     res.setHeader('content-type', 'text/html; charset=utf-8');
     res.status(200).send(APARTMENT_TOUR);
     return;

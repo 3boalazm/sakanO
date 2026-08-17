@@ -2,7 +2,6 @@ import http from 'node:http';
 import { handle } from './lib/handler.js';
 import { envPresent } from './lib/firebase.js';
 import { PAGE } from './lib/page.js';
-import { APARTMENT_TOUR } from './lib/apartment.js';
 import { ASSETS } from './lib/assets.js';
 
 console.log('SERVER STARTED');
@@ -25,6 +24,7 @@ const server = http.createServer(async (req, res) => {
   // serve the Arabic app for any non-API GET request (so the domain shows the UI, not JSON)
   if (req.method === 'GET' && !url.pathname.startsWith('/api')) {
     if (url.pathname === '/apartment-tour-v6.html') {
+      const { APARTMENT_TOUR } = await import('./lib/apartment.js'); // lazy: 3.6MB, only needed for this one route
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...CORS });
       return res.end(APARTMENT_TOUR);
     }

@@ -3,6 +3,7 @@ import { handle } from './lib/handler.js';
 import { envPresent } from './lib/firebase.js';
 import { PAGE } from './lib/page.js';
 import { APARTMENT_TOUR } from './lib/apartment.js';
+import { ASSETS } from './lib/assets.js';
 
 console.log('SERVER STARTED');
 console.log('ENV CHECK FIREBASE_SERVICE_ACCOUNT:', envPresent());
@@ -27,7 +28,15 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...CORS });
       return res.end(APARTMENT_TOUR);
     }
-    if (url.pathname === '/favicon.ico') { res.writeHead(204, CORS); return res.end(); }
+    // PWA/static assets — embedded as base64 at build time (see build.mjs), not read from
+    // disk, so this works identically on Railway/local and on Vercel (whose build only
+    // bundles files it can statically trace; a runtime-constructed fs path isn't one of them).
+    if (ASSETS[url.pathname]) {
+      const { b64, ct } = ASSETS[url.pathname];
+      const cc = ct.startsWith('image/') ? 'public, max-age=86400' : 'public, max-age=3600, must-revalidate';
+      res.writeHead(200, { 'content-type': ct, 'cache-control': cc, ...CORS });
+      return res.end(Buffer.from(b64, 'base64'));
+    }
     if (url.pathname.startsWith('/fonts/')) {
       const name = url.pathname.slice('/fonts/'.length);
       try {
@@ -39,43 +48,6 @@ const server = http.createServer(async (req, res) => {
         }
       } catch {}
       res.writeHead(404, CORS); return res.end();
-    }
-    if (url.pathname.startsWith('/media/') || url.pathname.startsWith('/js/')
-        || url.pathname.startsWith('/icons/') || url.pathname === '/sw.js'
-        || url.pathname === '/manifest.json') {
-      try {
-        const rel = decodeURIComponent(url.pathname).replace(/\.\.+/g, '');
-        const fs = await import('node:fs/promises');
-        const pathMod = await import('node:path');
-        // media/ lives at repo root; js/, icons/, sw.js, manifest.json live under src/
-        const isMedia = url.pathname.startsWith('/media/');
-        const rootFile = pathMod.join(process.cwd(), rel);
-        const srcFile  = pathMod.join(process.cwd(), 'src', rel);
-        let file, data;
-        if (isMedia) {
-          // try repo root first, then src/media/
-          try { data = await fs.readFile(rootFile); file = rootFile; }
-          catch { data = await fs.readFile(srcFile); file = srcFile; }
-        } else {
-          file = srcFile;
-          data = await fs.readFile(file);
-        }
-        const ext = file.split('.').pop().toLowerCase();
-        const ctMap = {
-          js: 'application/javascript; charset=utf-8',
-          json: 'application/json; charset=utf-8',
-          svg: 'image/svg+xml',
-          png: 'image/png',
-          jpg: 'image/jpeg', jpeg: 'image/jpeg',
-          otf: 'font/otf', ttf: 'font/ttf',
-        };
-        const ct = ctMap[ext] || 'application/octet-stream';
-        const cc = (ext === 'js' || ext === 'css') ? 'public, max-age=3600'
-                 : (ext === 'png' || ext === 'jpg' || ext === 'jpeg' || ext === 'otf') ? 'public, max-age=86400'
-                 : 'no-cache';
-        res.writeHead(200, { 'content-type': ct, 'cache-control': cc, ...CORS });
-        return res.end(data);
-      } catch { res.writeHead(404, CORS); return res.end(); }
     }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...CORS });
     return res.end(PAGE);

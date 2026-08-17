@@ -6,9 +6,9 @@
 // Workflow:  edit files under src/css and src/js, then:  npm run build
 // (index.html and lib/page.js are generated artifacts — do not edit them by hand.)
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, extname } from 'node:path';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const r = (...p) => join(ROOT, ...p);
@@ -45,4 +45,30 @@ writeFileSync(r('lib/page.js'), page);
 const back = Buffer.from(b64, 'base64').toString('utf8');
 if (back !== html) { console.error('FATAL: page.js round-trip mismatch'); process.exit(1); }
 
-console.log(`build ok — index.html ${html.length} chars, css ${css.length}, app.js ${appJs.length}, pwa.js ${pwaJs.length}`);
+// 6) bake lib/assets.js — small static files (manifest, service worker, icons, media,
+//    TWA asset links) embedded as base64 so both server.js and api/[[...path]].js can
+//    serve them without reading the filesystem at runtime. Plain fs.readFile of these
+//    paths works locally and on Railway, but Vercel's build only bundles files it can
+//    statically trace from imports — a dynamically-constructed fs path is invisible to
+//    that tracer, so the files silently don't ship and every request 404s in production.
+const CONTENT_TYPES = {
+  '.json': 'application/json', '.js': 'application/javascript', '.ico': 'image/x-icon',
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml',
+};
+const assetFile = (urlPath, diskPath) => {
+  const b64 = readFileSync(r(diskPath)).toString('base64');
+  const ct = CONTENT_TYPES[extname(diskPath).toLowerCase()] || 'application/octet-stream';
+  return [urlPath, { b64, ct }];
+};
+const assetEntries = [
+  assetFile('/manifest.json', 'src/manifest.json'),
+  assetFile('/sw.js', 'src/sw.js'),
+  assetFile('/favicon.ico', 'src/icons/favicon.ico'),
+  assetFile('/.well-known/assetlinks.json', 'src/.well-known/assetlinks.json'),
+  ...readdirSync(r('src/icons')).map((f) => assetFile('/icons/' + f, 'src/icons/' + f)),
+  ...readdirSync(r('src/media')).map((f) => assetFile('/media/' + f, 'src/media/' + f)),
+];
+const assetsSrc = 'export const ASSETS = ' + JSON.stringify(Object.fromEntries(assetEntries)) + ';\n';
+writeFileSync(r('lib/assets.js'), assetsSrc);
+
+console.log(`build ok — index.html ${html.length} chars, css ${css.length}, app.js ${appJs.length}, pwa.js ${pwaJs.length}, assets ${assetEntries.length}`);

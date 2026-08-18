@@ -104,11 +104,11 @@
             <div class="actions" style="justify-content:space-between"><span class="pill ${c.mine?'':'warn'}">${c.mine?'رسالتك':'رسالة شريكك'}</span>${c.openDate?`<span class="pill">📅 ${esc(c.openDate)}</span>`:(c.manual?`<span class="pill">✋ تتبعت يدوي</span>`:"")}</div>
             ${c.createdAt?`<p class="muted" style="margin:6px 0 0;font-size:12px">✍️ ${esc(capDate(c.createdAt))}</p>`:""}
             <p style="margin:6px 0 0;white-space:pre-wrap;word-break:break-word">${c.sealed?'<span class="muted">🔒 مختومة.</span>':esc(c.content)}</p>
-            ${c.canOpen?`<div class="actions" style="margin-top:8px;flex-wrap:wrap;gap:6px">
+            ${c.mine?`<div class="actions" style="margin-top:8px;flex-wrap:wrap;gap:6px">
               <button class="linkbtn" data-act="delCapsule" data-id="${esc(c.id)}">حذف</button>
-              <button class="linkbtn" data-act="convCapsule" data-id="${esc(c.id)}" data-to="${c.manual?'date':'manual'}">${c.manual?'حوّلها لفتح بتاريخ':'خلّيها مختومة (أبعتها بنفسي)'}</button>
+              ${c.canOpen?`<button class="linkbtn" data-act="convCapsule" data-id="${esc(c.id)}" data-to="${c.manual?'date':'manual'}">${c.manual?'حوّلها لفتح بتاريخ':'خلّيها مختومة (أبعتها بنفسي)'}</button>
               <span class="spacer"></span>
-              <button class="btn accent sm" data-act="openCapsule" data-id="${esc(c.id)}">${c.manual?'ابعتها لشريكي دلوقتي':'افتحها لشريكي دلوقتي'}</button>
+              <button class="btn accent sm" data-act="openCapsule" data-id="${esc(c.id)}">${c.manual?'ابعتها لشريكي دلوقتي':'افتحها لشريكي دلوقتي'}</button>`:""}
             </div>`:""}</div>`).join("") : ""}</div>
 
         <div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">

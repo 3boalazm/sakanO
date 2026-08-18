@@ -221,7 +221,7 @@
       if(act==="capMode"){ const wrap=document.getElementById("capMode"); if(wrap)[...wrap.children].forEach(x=>x.classList.toggle("on",x===node)); const dw=document.getElementById("capDateWrap"); if(dw) dw.style.display = node.dataset.mode==="manual"?"none":""; return; }
       if(act==="addCapsule"){ const c=(document.getElementById("capContent").value||"").trim(); if(!c) return toast("اكتب رسالتك"); const manual=!!(document.querySelector("#capMode button.on")||{}).dataset && (document.querySelector("#capMode button.on")||{}).dataset.mode==="manual"; const d=(document.getElementById("capDate").value||"").trim(); try{ await api("POST","/capsules",{content:c,openDate:manual?null:(d||null),manualSeal:manual}); toast("خُتمت الرسالة"); renderConnect(); }catch(e){ toast(e.code==="BAD_DATE"?"تاريخ غير صالح":errMsg(e)); } return; }
       if(act==="openCapsule"){ await api("POST","/capsules/"+node.dataset.id+"/open"); toast("اتبعتت لشريكك 💌"); renderConnect(); return; }
-      if(act==="delCapsule"){ if(!confirm("تحذف الرسالة المؤجّلة دي نهائيًا؟")) return; await api("POST","/capsules/"+node.dataset.id+"/delete"); toast("اتحذفت الرسالة"); renderConnect(); return; }
+      if(act==="delCapsule"){ if(!confirm("تحذف الرسالة دي نهائيًا؟")) return; await api("POST","/capsules/"+node.dataset.id+"/delete"); toast("اتحذفت الرسالة"); renderConnect(); return; }
       if(act==="convCapsule"){
         const to=node.dataset.to;
         if(to==="manual"){ await api("POST","/capsules/"+node.dataset.id+"/convert",{manualSeal:true}); toast("بقت مختومة — تبعتها بنفسك"); renderConnect(); return; }
